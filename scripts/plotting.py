@@ -16,6 +16,21 @@ def print_greeting():
     print("Hello World from Python!")
     print(np.zeros(4))
 
+def plot_coord():
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_xlabel('X')
+    ax.set_xlim(-1, 2)
+    ax.set_ylabel('Y')
+    ax.set_ylim(-1, 2)
+    ax.set_zlabel('Z')
+    ax.set_zlim(-1, 2)
+
+    trafo_mat(np.array([[1,0,0,1.5],[0,1/2,-math.sqrt(3)/2, 1.5],[0,math.sqrt(3)/2,1/2,1.5],[0,0,0,1]]), ax)
+    trafo_mat(np.array([[1,0,0,1.5],[0,0,-1, 1.5],[0,1,0,1.5],[0,0,0,1]]), ax)
+
+    plt.show()
+
 def trafo_mat(mat = np.zeros([4,4]), ax1=plt.figure().add_subplot(111, projection='3d')):
     
     x_axis = np.matmul(mat[:3,:3],np.array([1,0,0]))
@@ -37,16 +52,3 @@ def trafo_mat(mat = np.zeros([4,4]), ax1=plt.figure().add_subplot(111, projectio
 if __name__ == "__main__":
     print_greeting()
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.set_xlabel('X')
-    ax.set_xlim(-1, 2)
-    ax.set_ylabel('Y')
-    ax.set_ylim(-1, 2)
-    ax.set_zlabel('Z')
-    ax.set_zlim(-1, 2)
-
-    trafo_mat(np.array([[1,0,0,1.5],[0,1/2,-math.sqrt(3)/2, 1.5],[0,math.sqrt(3)/2,1/2,1.5],[0,0,0,1]]), ax)
-    trafo_mat(np.array([[1,0,0,1.5],[0,0,-1, 1.5],[0,1,0,1.5],[0,0,0,1]]), ax)
-
-    plt.show()
