@@ -16,7 +16,7 @@ def print_greeting():
     print("Hello World from Python!")
     print(np.zeros(4))
 
-def plot_coord():
+def plot_coord(mat = np.zeros([4,4])):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.set_xlabel('X')
@@ -26,8 +26,10 @@ def plot_coord():
     ax.set_zlabel('Z')
     ax.set_zlim(-1, 2)
 
-    trafo_mat(np.array([[1,0,0,1.5],[0,1/2,-math.sqrt(3)/2, 1.5],[0,math.sqrt(3)/2,1/2,1.5],[0,0,0,1]]), ax)
-    trafo_mat(np.array([[1,0,0,1.5],[0,0,-1, 1.5],[0,1,0,1.5],[0,0,0,1]]), ax)
+    trafo_mat(np.array([[1,0,0,0],[0,1,0, 0],[0,0,1,0],[0,0,0,1]]), ax)
+    trafo_mat(mat, ax)
+    # trafo_mat(np.array([[1,0,0,1.5],[0,1/2,-math.sqrt(3)/2, 1.5],[0,math.sqrt(3)/2,1/2,1.5],[0,0,0,1]]), ax)
+    # trafo_mat(np.array([[1,0,0,1.5],[0,0,-1, 1.5],[0,1,0,1.5],[0,0,0,1]]), ax)
 
     plt.show()
 
