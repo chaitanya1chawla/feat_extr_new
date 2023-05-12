@@ -25,4 +25,5 @@ target_link_libraries(TrajectoryPlotting ${AndreiUtils_LIBRARY} Eigen3::Eigen dq
 target_compile_options(TrajectoryPlotting PUBLIC ${PCL_OPTIMIZATION_FLAGS})
 
 add_executable(TestAndreiUtils main.cpp)
-target_link_libraries(TestAndreiUtils ${AndreiUtils_LIBRARY})
+target_link_libraries(TestAndreiUtils ${AndreiUtils_LIBRARY} Eigen3::Eigen dqrobotics dqrobotics-interface-vrep pthread)
+target_compile_options(TestAndreiUtils PUBLIC ${PCL_OPTIMIZATION_FLAGS})

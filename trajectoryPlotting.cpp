@@ -8,9 +8,10 @@
 #include <vector>
 #include <iostream>
 #include <cmath>
-#include <json/value.h>
 #include <fstream>
+#include <nlohmann/json.hpp>
 
+using json = nlohmann::json;
 using namespace AndreiUtils;
 using namespace std;
 using namespace Eigen;
@@ -19,10 +20,12 @@ using namespace Eigen;
 int main() {
     cout << "Hello World!" << endl;
 
-    std::ifstream demo_file("data/demonstration_2023-03-17-17-11-02_426849468.json", std::ifstream::binary);
-    Json::Value demo_data; 
-    demo_file >> demo_data;
-    cout << demo_data[0];
+    std::ifstream demo_file("../data/demonstration_2023-05-08-13-32-14_980300108.json");
+//    std::ifstream demo_file("../data/sample.json");
+
+    json data = json::parse(demo_file);
+
+    cout << data[0];
 
 //    PythonInterface python;
 //    double myNum[8] = {10, 20, 30, 1, 0, 3,4,5}; // input quaternion
