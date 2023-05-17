@@ -20,21 +20,26 @@ int main() {
     
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
     // Generate pointcloud data
-    cloud->width = 1000;
+    cloud->width = 500;
     cloud->height = 1;
     cloud->points.resize (cloud->width * cloud->height);
 
     for (std::size_t i = 0; i < cloud->size (); ++i)
     {
-      (*cloud)[i].x = 1024.0f * rand () / (RAND_MAX + 1.0f);
-      (*cloud)[i].y = 1024.0f * rand () / (RAND_MAX + 1.0f);
-      (*cloud)[i].z = 1024.0f * rand () / (RAND_MAX + 1.0f);
+        vector<double> vec = data[0]["objects"]["CerealBoxKelloggsMuslixInstance"]["geometryPose"];
+
+        (*cloud)[i].x = src[5];
+        (*cloud)[i].y = src[6];
+        (*cloud)[i].z = src[7];
     } 
 
-    while(ctr < 500){
+    float resolution = 128.0f;
 
+    pcl::octree::OctreePointCloud<pcl::PointXYZ> octree (resolution);
+    octree.setInputCloud(cloud);
+    octree.addPointsFromInputCloud();
+    
+    octree.getOccupiedVoxelCenters()
 
-    }
-    cout << data[0];
 
 }
