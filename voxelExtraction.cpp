@@ -2,7 +2,8 @@
 #include <iostream>
 #include <Eigen/Dense>
 #include <vector>
-#include <nlohmann/json.hpp>
+#include <fstream>
+#include <AndreiUtils/utilsJson.h>
 
 #include <pcl/point_cloud.h>
 #include <pcl/octree/octree_search.h>
@@ -11,22 +12,24 @@ using json = nlohmann::json;
 using namespace AndreiUtils;
 using namespace std;
 using namespace Eigen;
+using namespace pcl;
+
+
 
 int main() {
     cout << "Hello World!" << endl;
 
-    std::ifstream demo_file("../data/demonstration_2023-05-08-13-32-14_980300108.json");
-    json data = json::parse(demo_file);
+    json data = readJsonFile("../data/demonstration_2023-05-08-13-32-14_980300108.json");
     
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+    PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
     // Generate pointcloud data
     cloud->width = 500;
     cloud->height = 1;
     cloud->points.resize (cloud->width * cloud->height);
 
-    for (std::size_t i = 0; i < cloud->size (); ++i)
+    for (int i = 0; i < 400; ++i)
     {
-        vector<double> vec = data[0]["objects"]["CerealBoxKelloggsMuslixInstance"]["geometryPose"];
+        vector<double> src = data[i]["objects"]["CerealBoxKelloggsMuslixInstance"]["geometryPose"];
 
         (*cloud)[i].x = src[5];
         (*cloud)[i].y = src[6];
@@ -35,11 +38,11 @@ int main() {
 
     float resolution = 128.0f;
 
-    pcl::octree::OctreePointCloud<pcl::PointXYZ> octree (resolution);
+    octree::OctreePointCloud<pcl::PointXYZ> octree (resolution);
     octree.setInputCloud(cloud);
     octree.addPointsFromInputCloud();
-    
-    octree.getOccupiedVoxelCenters()
-
-
+    octree::OctreePointCloud<pcl::PointXYZ>::AlignedPointTVector ab;
+    cout<<octree.getOccupiedVoxelCenters(ab);
+    cout<<
 }
+

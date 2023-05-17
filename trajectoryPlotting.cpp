@@ -9,7 +9,7 @@
 #include <iostream>
 #include <cmath>
 #include <fstream>
-#include <nlohmann/json.hpp>
+#include <AndreiUtils/utilsJson.h>
 #include <pybind11/eigen.h>
 
 using json = nlohmann::json;
@@ -21,10 +21,7 @@ using namespace Eigen;
 int main() {
     cout << "Hello World!" << endl;
 
-    ifstream demo_file("../data/demonstration_2023-05-08-13-32-14_980300108.json");
-//    ifstream demo_file("../data/sample.json");
-
-    json data = json::parse(demo_file);
+    json data = readJsonFile("../data/demonstration_2023-05-08-13-32-14_980300108.json");
 
     vector<double> src = data[0]["objects"]["CerealBoxKelloggsMuslixInstance"]["geometryPose"];
 
