@@ -1,0 +1,6 @@
+to check where is your key connected - vim .git/config
+and which key is connected
+
+
+if downloading a key from another place, make sure private key is read write only
+chmod 600 ~/.ssh/id_rsa
