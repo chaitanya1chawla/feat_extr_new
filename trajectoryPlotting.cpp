@@ -9,6 +9,7 @@
 #include <iostream>
 #include <cmath>
 #include <fstream>
+#include <AndreiUtils/classes/DualQuaternion.hpp>
 #include <AndreiUtils/utilsJson.h>
 #include <pybind11/eigen.h>
 
@@ -24,9 +25,12 @@ int main() {
     json data = readJsonFile("../data/demonstration_2023-05-08-13-32-14_980300108.json");
 
     vector<double> src = data[0]["objects"]["CerealBoxKelloggsMuslixInstance"]["geometryPose"];
+    Posed q;
+    q.fromCoefficients(src);
+    auto t  = q.getTranslation();
 
     PythonInterface python;
-    Vector4d pos(src[5],src[6],src[7],1.0);
+    Vector4d pos(t.x(),t.y(),t.z(),1.0);
     cout << pos<<endl;
     MatrixXd m(4,4);
 

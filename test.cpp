@@ -16,7 +16,7 @@ public:
     };
 };
 
-class bottom : public left, public right {
+class bottom : public left{
 public:
     void foo()
     {
@@ -29,5 +29,5 @@ public:
 int main(){
     bottom b;
     b.left::foo();  // calls b.foo() from 'left'
-    b.right::foo();  // call b.foo() from 'right'
+    //b.right::foo();  // call b.foo() from 'right'
 }
