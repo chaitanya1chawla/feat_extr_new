@@ -50,8 +50,9 @@ int main() {
                                                                                                                    cos_t,             0};
     m.col(3) = pos;
 
-    python.reInitialize("scripts.plotting", {"print_greeting"});
-    python.callFunction("print_greeting", m);
+    m = q.getTransformationMatrix();
+    python.reInitialize("scripts.plotting", {"plot_coord", "trafo_mat", "print_greeting"});
+    python.callFunction("plot_coord", m);
 
     return 0;
 }

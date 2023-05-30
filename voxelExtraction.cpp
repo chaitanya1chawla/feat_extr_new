@@ -22,7 +22,9 @@ using namespace std;
 using namespace Eigen;
 using namespace pcl;
 int const maxIntermediaryPoints = 3;
-int const number_of_clouds = 2;
+int const number_of_clouds = 3;
+// minimum distance between voxels to detect
+double const maxDistance = 0.25;
 
 
 bool sortbysec(pair<PointXYZ, int> const &a,
@@ -52,6 +54,7 @@ int main() {
 
     data[0] = readJsonFile("../data/demonstration_2023-05-19-16-24-31_679894510.json");
     data[1] = readJsonFile("../data/demonstration_2023-05-19-16-23-07_771535671.json");
+    data[2] = readJsonFile("../data/demonstration_2023-05-19-16-25-09-343253856.json");
 
     // PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
     // PointCloud<pcl::PointXYZ>::Ptr cloud2(new pcl::PointCloud<pcl::PointXYZ>);
@@ -79,7 +82,8 @@ int main() {
         clouds[k]->height = 1;
         clouds[k]->points.resize(clouds[k]->width * clouds[k]->height);
 
-        for (int i = 0; i < 450; ++i) {
+        for (int i = 0; i < data[k].size(); ++i) {
+            // the manipulated object instance here is assumed to be MilkCartonLidlInstance1
             vector<double> src = data[k][i]["objects"]["MilkCartonLidlInstance1"]["geometryPose"];
             q.fromCoefficients(src);
             auto t = q.getTranslation();
@@ -98,8 +102,8 @@ int main() {
     cout << "TOTAL NUMBER OF VOXELS = " << voxelNum[0] << " and " << voxelNum[1];
 
 
-    for (int k = 0; k < number_of_clouds; k++) {
-        for (int i = 0; i < voxelNum[k]; i++) {
+    for (int k : voxelNum) {
+        for (int i = 0; i < k; i++) {
 
             cout << centers[k][i]; // printing i-th center of k-th point cloud
             // OctreePointCloud inherits from OctreePointCloudDensity
@@ -117,16 +121,15 @@ int main() {
 
     // setting all distances as 100 meters, so that it isnt recognized as minimum
     double dist[number_of_clouds - 1][number_of_clouds][maxIntermediaryPoints][maxIntermediaryPoints] = {0};
-    for (int k = 0; k < number_of_clouds - 1; ++k) {
-        for (int h = 0; h < number_of_clouds; ++h) {
-            for (int i = 0; i < maxIntermediaryPoints; ++i) {
-                for (int j = 0; j < maxIntermediaryPoints; ++j) {
-                    dist[k][h][i][j] = 100.0;
+    for (auto & k : dist) {
+        for (auto & h : k) {
+            for (auto & i : h) {
+                for (double & j : i) {
+                    j = 100.0;
                 }
             }
         }
     }
-    //cout<<dist[0][1][1][0]<<endl<<dist[0][1][1][1]<<endl<<dist[0][1][1][2]<<endl<<dist[0][1][1][3]<<endl;
 
     for (int k = 0; k < number_of_clouds - 1; k++) {
         for (int h = k + 1; h < number_of_clouds; h++) {
@@ -145,70 +148,60 @@ int main() {
 
     for (int k = 0; k < maxIntermediaryPoints; k++) {
 
-        int min_index[number_of_clouds];
-        min_index[0] = k;
+        cout<<"Intermediary Point no. - "<<k<<endl;
+        vector<int> min_index;
+        min_index.push_back(k);
 
         for (int h = 1; h < number_of_clouds; h++) {
-
+            cout<<"Cloud no.- " <<h<<endl;
             int a = findMin(dist[0][h][k]);
             cout << "a = " << a << endl;
-            if (dist[0][h][k][a] < 0.05) {
-                min_index[h] = a;
+            if (dist[0][h][k][a] < maxDistance) {
+                min_index.push_back(a);
+            }
+            else{
+                min_index.push_back(-1);
             }
         }
         cout << min_index[1];
-/*
+
         int flag = 0;
-        for (int i = 0; i < number_of_clouds - 1; i++) {
+        for (int i = 1; i < number_of_clouds - 1; i++) {
             for (int j = i + 1; j < number_of_clouds; j++) {
-                int ctr1=min_index[i];
-                int ctr2=min_index[j];
-                if (!(dist[i][j][ctr1][ctr2] < 0.5)) {
+                int ctr1 = min_index[i];
+                int ctr2 = min_index[j];
+                if(ctr1 < 0 || ctr2 < 0 || ctr1 > maxIntermediaryPoints || ctr2 > maxIntermediaryPoints){
+                    flag = 1;
+                    continue;
+                }
+                if (dist[i][j][ctr1][ctr2] >= maxDistance) {
                     flag = 1;
                 }
             }
         }
 
+        char ch;
+        string str;
         if (flag == 0) {
-            cout << "Intermediary Point found at " << pairs[0][k].first;
-        }
-*/
-    }
-
-
-/*
- * for(int h = k+1; h < number_of_clouds; h++){
-            for(int i = 0; i < maxIntermediaryPoints; i++){
-
-                double *min = min_element( begin( dist[k][h][i] ), end( dist[k][h][i] ) );
-
-                auto itr = find(begin(dist[k][h][i]), end(dist[k][h][i]), *min);
-                auto loc = distance(dist[k][h][i], itr);
+            cout << "Intermediary Point found at " << pairs[0][k].first<<endl;
+            cout << "Was the detected Intermediary Point intended in the demonstrations? y/N"<<endl;
+            cin >> ch;
+            if(ch == 'y' || ch == 'Y'){
+                cout << "Please give the object's name - "<<endl;
+                cin >> str;
+                cout << "Object - "<<str<<" set at "<<pairs[0][k].first<<endl;
+            }
+            if(ch == 'n' || ch == 'N'){
+                cout << "Point deleted";
             }
         }
- *
- *
- *
- *
- *
-    double dist[100][100] = {0};
 
-    for(int i=0; i < min(voxelNum, voxelNum2); i++) {
-
-        for (int j =0; j < max(voxelNum, voxelNum2); j++){
-
-            dist[i][j] = pow((centers[0][i].x - centers[1][j].x),2) +
-                         pow((centers[0][i].y - centers[1][j].y),2) +
-                         pow((centers[0][i].z - centers[1][j].z),2);
+        else {
+            cout<< "No point found";
         }
-
+        
     }
 
-    double *min = min_element( begin( dist[3] ), std::end( dist[3] ) );
-
-*/
-
-
-
+    return 0;
 }
 
