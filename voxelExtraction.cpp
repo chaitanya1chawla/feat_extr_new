@@ -14,7 +14,7 @@
 
 #include <pcl/point_cloud.h>
 #include <pcl/octree/octree_pointcloud_density.h>
-#include <pcl/octree/octree_impl.h>
+
 
 using json = nlohmann::json;
 using namespace AndreiUtils;
@@ -24,7 +24,7 @@ using namespace pcl;
 int const maxIntermediaryPoints = 3;
 int const number_of_clouds = 3;
 // minimum distance between voxels to detect
-double const maxDistance = 0.25;
+double const maxDistance = 0.20;
 
 
 bool sortbysec(pair<PointXYZ, int> const &a,
@@ -35,8 +35,8 @@ bool sortbysec(pair<PointXYZ, int> const &a,
 
 int findMin(double *x) {
 
-    cout << "x = " << x[0] << endl << x[1] << endl;
-    int min_val = 100;
+    cout << "x = " << x[0] << endl << x[1] << endl<<x[2]<<endl;
+    double min_val = 100.0;
     int min_index = 0;
     for (int i = 0; i < maxIntermediaryPoints; ++i) {
         if (x[i] < min_val) {
@@ -54,7 +54,7 @@ int main() {
 
     data[0] = readJsonFile("../data/demonstration_2023-05-19-16-24-31_679894510.json");
     data[1] = readJsonFile("../data/demonstration_2023-05-19-16-23-07_771535671.json");
-    data[2] = readJsonFile("../data/demonstration_2023-05-19-16-25-09-343253856.json");
+    data[2] = readJsonFile("../data/demonstration_2023-05-19-16-25-09_343253856.json");
 
     // PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
     // PointCloud<pcl::PointXYZ>::Ptr cloud2(new pcl::PointCloud<pcl::PointXYZ>);
@@ -78,11 +78,11 @@ int main() {
 
         clouds[k] = PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
         // Generate pointcloud data
-        clouds[k]->width = 500;
+        clouds[k]->width = 600;
         clouds[k]->height = 1;
         clouds[k]->points.resize(clouds[k]->width * clouds[k]->height);
 
-        for (int i = 0; i < data[k].size(); ++i) {
+        for (int i = 0; i < data[k].size()-1; ++i) {
             // the manipulated object instance here is assumed to be MilkCartonLidlInstance1
             vector<double> src = data[k][i]["objects"]["MilkCartonLidlInstance1"]["geometryPose"];
             q.fromCoefficients(src);
@@ -91,19 +91,24 @@ int main() {
             (*clouds[k])[i].y = t.y();
             (*clouds[k])[i].z = t.z();
             cout << t.transpose() << endl;
+            cout<<"i = "<<i<<endl;
+            if(i == 285){
+                cout<<endl<<"done"<<endl;
+            }
         }
-
+        cout<<"CLOUD FINISHED!!!!!";
         octree[k].setInputCloud(clouds[k]);         // octree2.OctreePointCloud::setInputCloud(clouds[1]);
         octree[k].addPointsFromInputCloud();
         voxelNum[k] = octree[k].getOccupiedVoxelCenters(centers[k]);
+        cout<<"CLOUD SET!";
 
     }
 
     cout << "TOTAL NUMBER OF VOXELS = " << voxelNum[0] << " and " << voxelNum[1];
 
 
-    for (int k : voxelNum) {
-        for (int i = 0; i < k; i++) {
+    for (int k=0; k < number_of_clouds; k++) {
+        for (int i = 0; i < voxelNum[k]; i++) {
 
             cout << centers[k][i]; // printing i-th center of k-th point cloud
             // OctreePointCloud inherits from OctreePointCloudDensity
@@ -148,14 +153,16 @@ int main() {
 
     for (int k = 0; k < maxIntermediaryPoints; k++) {
 
-        cout<<"Intermediary Point no. - "<<k<<endl;
+        cout<<endl<<"Intermediary Point no. - "<<k<<endl;
         vector<int> min_index;
         min_index.push_back(k);
 
         for (int h = 1; h < number_of_clouds; h++) {
+
             cout<<"Cloud no.- " <<h<<endl;
             int a = findMin(dist[0][h][k]);
             cout << "a = " << a << endl;
+
             if (dist[0][h][k][a] < maxDistance) {
                 min_index.push_back(a);
             }
@@ -163,13 +170,17 @@ int main() {
                 min_index.push_back(-1);
             }
         }
-        cout << min_index[1];
+        cout << "min_index = "<<min_index[1]<<" and "<<min_index[2]<<endl;
 
         int flag = 0;
         for (int i = 1; i < number_of_clouds - 1; i++) {
             for (int j = i + 1; j < number_of_clouds; j++) {
-                int ctr1 = min_index[i];
-                int ctr2 = min_index[j];
+
+                int ctr1;
+                ctr1 = min_index[i];
+                int ctr2;
+                ctr2 = min_index[j];
+
                 if(ctr1 < 0 || ctr2 < 0 || ctr1 > maxIntermediaryPoints || ctr2 > maxIntermediaryPoints){
                     flag = 1;
                     continue;
@@ -183,9 +194,11 @@ int main() {
         char ch;
         string str;
         if (flag == 0) {
+
             cout << "Intermediary Point found at " << pairs[0][k].first<<endl;
             cout << "Was the detected Intermediary Point intended in the demonstrations? y/N"<<endl;
             cin >> ch;
+
             if(ch == 'y' || ch == 'Y'){
                 cout << "Please give the object's name - "<<endl;
                 cin >> str;
@@ -199,7 +212,8 @@ int main() {
         else {
             cout<< "No point found";
         }
-        
+
+
     }
 
     return 0;
