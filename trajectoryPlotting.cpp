@@ -19,20 +19,17 @@ using namespace AndreiUtils;
 using namespace std;
 using namespace Eigen;
 
-
-int main() {
-    cout << "Hello World!" << endl;
-
+void trajectoryPlottingChaitanya() {
     json data = readJsonFile("../data/demonstration_2023-05-19-16-23-07_771535671.json");
-    vector<Matrix<double,4,4>> mm;
+    vector<Matrix<double, 4, 4>> mm;
     Posed q;
 
-//    for(int i = 0; i <data.size(); i ++){
-//
-//        vector<double> src = data[i]["objects"]["CerealBoxKelloggsMuslixInstance"]["geometryPose"];
-//        q.fromCoefficients(src);
-//        mm.push_back(q.getTransformationMatrix());
-//    }
+    for (int i = 0; i < data.size(); i++) {
+
+        vector<double> src = data[i]["objects"]["MilkCartonLidlInstance1"]["geometryPose"];
+        q.fromCoefficients(src);
+        mm.push_back(q.getTransformationMatrix());
+    }
 //    Posed q;
 //    q.fromCoefficients(src);
 //    auto t  = q.getTranslation();
@@ -63,20 +60,57 @@ int main() {
 
     m = q.getTransformationMatrix();
 */
-    cout<<"norms";
-    python.reInitialize("scripts.plotting", {"plot_coord", "trafo_mat", "print_greeting"});
-    //python.callFunction("print_greeting");
-    //python.callFunction("plot_coord");
+    cout << "norms" << endl;
+    python.reInitialize("scripts.plotting", {"plot_coord", "trafo_mat", "print_greeting", "plot_show"});
+    python.callFunction("print_greeting");
+    python.callFunction("plot_coord");
 
+    python.callFunction("trafo_mat", mm);
+    /*
     for(int i = 0; i <data.size(); i ++) {
 
         vector<double> src = data[i]["objects"]["MilkCartonLidlInstance1"]["geometryPose"];
         q.fromCoefficients(src);
         MatrixXd m(4,4);
         m = q.getTransformationMatrix();
-        cout<<m;
-        //python.callFunction("trafo_mat", m);
+        cout<<m<<endl;
+        python.callFunction("trafo_mat", m);
     }
+    python.callFunction("plot_show");
+*/
+}
+
+void trajectoryPlottingAndrei() {
+    json data = readJsonFile("../data/demonstration_2023-05-19-16-23-07_771535671.json");
+    Posed q;
+
+    cout << "Data points = " << data.size() << endl;
+    int eigenPoints = ceil(data.size() / 1.);
+    cout << "Reduce to " << eigenPoints << endl;
+    Eigen::MatrixX3d origins = MatrixX3d::Zero(eigenPoints, 3);
+    Eigen::MatrixX3d orientations = MatrixX3d::Zero(3 * eigenPoints, 3);
+
+    for (int i = 0; i < data.size(); i += 10) {
+        vector<double> src = data[i]["objects"]["MilkCartonLidlInstance1"]["geometryPose"];
+        q.fromCoefficients(src);
+
+        int eigenIndex = i / 10;
+        origins.row(eigenIndex) = q.getTranslation();
+        auto const &r = q.getRotationAsMatrix();
+        orientations.row(3 * eigenIndex) = r.col(0);
+        orientations.row(3 * eigenIndex + 1) = r.col(1);
+        orientations.row(3 * eigenIndex + 2) = r.col(2);
+    }
+
+    PythonInterface python;
+    python.reInitialize("scripts.plot_trajectory", {"plot_trajectory"});
+    python.getFunctions()["plot_trajectory"](origins, orientations, 0.5, 1, 0.02, false);
+}
+
+int main() {
+    cout << "Hello World!" << endl;
+
+    trajectoryPlottingAndrei();
 
     return 0;
 }
