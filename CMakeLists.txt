@@ -56,4 +56,11 @@ target_include_directories(VoxelExtraction
 target_link_directories(VoxelExtraction PUBLIC ${PCL_LIBRARY_DIRS})
 target_compile_options(VoxelExtraction PUBLIC ${PCL_OPTIMIZATION_FLAGS})
 
-
+find_package(OpenGL REQUIRED)
+find_package(GLUT REQUIRED)
+set(TARGET SurfaceExtraction)
+add_executable(${TARGET} surfaceExtractor.cpp)
+target_include_directories(${TARGET} PUBLIC ${PCL_INCLUDE_DIRS})
+target_link_directories(${TARGET} PUBLIC ${PCL_LIBRARY_DIRS})
+target_compile_definitions(${TARGET} PUBLIC ${PCL_DEFINITIONS})
+target_link_libraries(${TARGET} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${realsense2_LIBRARY} ${OPENGL_gl_LIBRARY} ${GLUT_LIBRARIES} glfw GLU glut GL pthread)
