@@ -55,6 +55,7 @@ void printPoint(pcl::PointXYZ const &point) {
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr points_to_pcl(rs2::points const &points) {
+
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
     auto sp = points.get_profile().as<rs2::video_stream_profile>();

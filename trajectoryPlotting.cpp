@@ -90,11 +90,11 @@ void trajectoryPlottingAndrei() {
     Eigen::MatrixX3d origins = MatrixX3d::Zero(eigenPoints, 3);
     Eigen::MatrixX3d orientations = MatrixX3d::Zero(3 * eigenPoints, 3);
 
-    for (int i = 0; i < data.size(); i += 10) {
+    for (int i = 0; i < data.size(); i += 2) {
         vector<double> src = data[i]["objects"]["MilkCartonLidlInstance1"]["geometryPose"];
         q.fromCoefficients(src);
 
-        int eigenIndex = i / 10;
+        int eigenIndex = i / 2;
         origins.row(eigenIndex) = q.getTranslation();
         auto const &r = q.getRotationAsMatrix();
         orientations.row(3 * eigenIndex) = r.col(0);

@@ -46,7 +46,7 @@ void getPerceptionOutputs() {
     namedWindow("Color - Output", WINDOW_NORMAL);
     resizeWindow("Color - Output", 1352, 1013);
     //*/
-    PointCloudData::ContentType const *pointCloudData;
+    PointCqloudData::ContentType const *pointCloudData;
     cv::Mat const *depthData, *colorData, *outputColorData;
     for (; exit == 0; count++) {
         // cout << "In while at " << count << endl;

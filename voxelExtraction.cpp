@@ -24,7 +24,7 @@ using namespace pcl;
 int const maxIntermediaryPoints = 3;
 int const number_of_clouds = 3;
 // minimum distance between voxels to detect
-double const maxDistance = 0.20;
+double const maxDistance = 0.25;
 
 
 bool sortbysec(pair<PointXYZ, int> const &a,
@@ -72,6 +72,16 @@ int main() {
     octree::OctreePointCloud<pcl::PointXYZ>::AlignedPointTVector centers[number_of_clouds];
     // for each point cloud exists a vector of pairs (of coord of center's voxel and number of points in that voxel)
     vector<vector<pair<PointXYZ, int>>> pairs(number_of_clouds);
+    Posed qq;
+    vector<double> src2 =data[0][10]["objects"]["BowlGreyIkeaInstance"]["geometryPose"];
+    qq.fromCoefficients(src2);
+    auto t2 = qq.getTranslation();
+    cout<<"bowl location = "<<t2.x()<<", "<<t2.y()<<", "<<t2.z()<<endl;
+
+    vector<double> src3 = data[0][10]["objects"]["DrinkingMugTUM-MPIInstance"]["geometryPose"];
+    qq.fromCoefficients(src3);
+    auto t3 = qq.getTranslation();
+    cout<<"mug location = "<<t3.x()<<", "<<t3.y()<<", "<<t3.z()<<endl;
 
     //Point Cloud and Octree generation
     for (int k = 0; k < number_of_clouds; k++) {
