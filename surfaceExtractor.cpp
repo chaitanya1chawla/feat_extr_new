@@ -16,6 +16,7 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/passthrough.h>
+#include <Eigen/Dense>
 
 #include "example.hpp"
 
@@ -140,6 +141,25 @@ public:
     explicit Surface(PCL surfacePoints, pcl::ModelCoefficients coefficients) :
             points(std::move(surfacePoints)), coefficients(std::move(coefficients)) {
         // TODO: compute the surface range here!
+        double maxx = -100, maxy = -100;
+        double minx = 100, miny = 100;
+        for (auto Pt:points) {
+
+            if (Pt.x > maxx) {
+                maxx = Pt.x;
+            }
+            if (Pt.x < minx) {
+                minx = Pt.x;
+            }
+            if (Pt.y > maxy) {
+                maxy = Pt.y;
+            }
+            if (Pt.y < miny) {
+                miny = Pt.y;
+            }
+            rangeX = {maxx, minx};
+            rangeY = {maxy, miny};
+        }
     }
 
     PCL const &getPoints() const {
@@ -149,6 +169,15 @@ public:
     PCL &getPoints() {
         return this->points;
     }
+
+    std::pair<double, double> const getXrange() const {
+        return rangeX;
+    }
+
+    std::pair<double, double> const getYrange() const {
+        return rangeY;
+    }
+
 
 protected:
     PCL points;
@@ -254,8 +283,7 @@ protected:
 
 void realsensePointCloud() {
     // Helper functions
-    try
-    {
+    try {
         SurfaceExtractor surfaceExtractor(0.015f, pcl::SACMODEL_PLANE, pcl::SAC_RANSAC, 1000, 0.02);
 
         // Create a simple OpenGL window for rendering:
@@ -310,8 +338,27 @@ void realsensePointCloud() {
 
             auto surfaces = surfaceExtractor.extractSurfaces(cloudFiltered, 0.15);
             cout << "Found " << surfaces.size() << " surfaces in the point cloud!" << endl;
+            int i = 0;
             for (auto const &surface: surfaces) {
                 layers.emplace_back(new Surface::PCL(surface.getPoints()));
+                // cout << "Range of x, in surface " << i << " = " << surface.getXrange().first << ", "
+                //     << surface.getXrange().second << endl;
+                // cout << "Range of y, in surface " << i << " = " << surface.getYrange().first << ", "
+                //     << surface.getYrange().second << endl;
+                int j = 0;
+                Eigen::MatrixXd A ;
+                A.resize(101,3);
+                for (auto Pt:surface.getPoints()) {
+                    if (j > 100){
+                        break;
+                    }
+                    A.row(j) = Eigen::Vector3d(Pt.x, Pt.y, Pt.z).transpose();
+                    j++;
+                }
+
+                Eigen::BDCSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
+                cout << "V matrix for " << i << " : " << svd.matrixV() << endl;
+                i++;
             }
 
             draw_pointcloud(app, app_state, layers);
