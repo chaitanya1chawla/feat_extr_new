@@ -18,12 +18,15 @@
 #include <pcl/filters/passthrough.h>
 #include <Eigen/Dense>
 
+#include <AndreiUtils/utilsJson.h>
+
 #include "example.hpp"
 
 using namespace cv;
 using namespace pcl;
 using namespace rs2;
 using namespace std;
+using json = nlohmann::json;
 
 // Struct for managing rotation of pointcloud view
 struct state {
@@ -143,7 +146,9 @@ public:
         // TODO: compute the surface range here!
         double maxx = -100, maxy = -100;
         double minx = 100, miny = 100;
+        ctr = 0;
         for (auto Pt:points) {
+            ctr++;
 
             if (Pt.x > maxx) {
                 maxx = Pt.x;
@@ -169,6 +174,9 @@ public:
     PCL &getPoints() {
         return this->points;
     }
+    int getNumberOfPoints() const{
+        return ctr;
+    }
 
     std::pair<double, double> const getXrange() const {
         return rangeX;
@@ -183,6 +191,7 @@ protected:
     PCL points;
     pcl::ModelCoefficients coefficients;
     std::pair<double, double> rangeX, rangeY;
+    int ctr;
 };
 
 class SurfaceExtractor {
@@ -309,6 +318,8 @@ void realsensePointCloud() {
         pass.setFilterFieldName("z");
         pass.setFilterLimits(0.0, 3.0);
 
+        Eigen::Matrix3d B;
+
         cv::Mat displayImage(100, 100, CV_8UC3);
         while (app) {
             // Wait for the next set of frames from the camera
@@ -347,22 +358,35 @@ void realsensePointCloud() {
                 //     << surface.getYrange().second << endl;
                 int j = 0;
                 Eigen::MatrixXd A ;
-                A.resize(101,3);
+                A.resize(surface.getNumberOfPoints()+1,3);
                 for (auto Pt:surface.getPoints()) {
-                    if (j > 100){
+                    if (j > surface.getNumberOfPoints()){
                         break;
                     }
-                    A.row(j) = Eigen::Vector3d(Pt.x, Pt.y, Pt.z).transpose();
+                    A.row(j) = Eigen::Vector3d(Pt.x, Pt.y, Pt.z);
                     j++;
                 }
 
-                Eigen::BDCSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
-                cout << "V matrix for " << i << " : " << svd.matrixV() << endl;
+                // subtracting mean of all points from the entire matrix
+                A = A.rowwise() - Eigen::Vector3d(A.col(0).mean(), A.col(1).mean(), A.col(2).mean()).transpose();
+                Eigen::BDCSVD<Eigen::MatrixXd> svd;
+                svd.compute(A, Eigen::ComputeFullV);
+                auto v = svd.matrixV();
+                cout << "V matrix for " << i << " : " << endl << v << endl;
+                auto newCoordinates = v.block(0,0,1,1) * A(Eigen::placeholders::all,vector<int> {0,1}).transpose();
+
+                // find max coordinates and save them with z axes from newCoordinates
+
+                if(i == 0){
+                    B = B + v;
+                }
                 i++;
             }
 
             draw_pointcloud(app, app_state, layers);
         }
+        B.colwise().normalize();
+        cout<<"Average V matrix = "<< endl << B;
     }
     catch (const rs2::error &e) {
         cerr << "RealSense error calling " << e.get_failed_function() << "(" << e.get_failed_args()
@@ -434,10 +458,11 @@ void draw_pointcloud(window &app, state &app_state, const std::vector<pcl_ptr> &
     glEnable(GL_TEXTURE_2D);
 
     int color = 0;
+    int counter = 0;
 
     for (auto &&pc: points) {
         auto c = colors[(color++) % (sizeof(colors) / sizeof(float3))];
-
+        // cout << "Color of surface"<<counter++<<" = "<< <<endl;
         glBegin(GL_POINTS);
         glColor3f(c.x, c.y, c.z);
 
