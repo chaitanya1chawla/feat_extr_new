@@ -21,7 +21,9 @@ using namespace AndreiUtils;
 using namespace std;
 using namespace Eigen;
 using namespace pcl;
+// set here maximum number of Intermediary Points -
 int const maxIntermediaryPoints = 3;
+// set here number of input clouds/ demonstrations -
 int const number_of_clouds = 3;
 // minimum distance between voxels to detect
 double const maxDistance = 0.25;

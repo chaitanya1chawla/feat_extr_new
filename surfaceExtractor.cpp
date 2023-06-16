@@ -19,6 +19,8 @@
 #include <Eigen/Dense>
 
 #include <AndreiUtils/utilsJson.h>
+#include <AndreiUtils/utilsTime.h>
+#include <chrono>
 
 #include "example.hpp"
 
@@ -26,6 +28,7 @@ using namespace cv;
 using namespace pcl;
 using namespace rs2;
 using namespace std;
+using namespace AndreiUtils;
 using json = nlohmann::json;
 
 // Struct for managing rotation of pointcloud view
@@ -291,8 +294,11 @@ protected:
 };
 
 void realsensePointCloud() {
+
     // Helper functions
     try {
+        vector<nlohmann::json> tracking;
+
         SurfaceExtractor surfaceExtractor(0.015f, pcl::SACMODEL_PLANE, pcl::SAC_RANSAC, 1000, 0.02);
 
         // Create a simple OpenGL window for rendering:
@@ -321,6 +327,8 @@ void realsensePointCloud() {
         Eigen::Matrix3d B;
 
         cv::Mat displayImage(100, 100, CV_8UC3);
+        int frameNumber = 0;
+
         while (app) {
             // Wait for the next set of frames from the camera
             auto frames = pipe.wait_for_frames();
@@ -349,14 +357,20 @@ void realsensePointCloud() {
 
             auto surfaces = surfaceExtractor.extractSurfaces(cloudFiltered, 0.15);
             cout << "Found " << surfaces.size() << " surfaces in the point cloud!" << endl;
+
+            json frame;
+            frame["index"] = frameNumber++;
+            frame["numberOfSurfaces"] = surfaces.size();
+
             int i = 0;
+            vector <json> surfacesData(surfaces.size());
             for (auto const &surface: surfaces) {
+
+                json singleSurface;
                 layers.emplace_back(new Surface::PCL(surface.getPoints()));
-                // cout << "Range of x, in surface " << i << " = " << surface.getXrange().first << ", "
-                //     << surface.getXrange().second << endl;
-                // cout << "Range of y, in surface " << i << " = " << surface.getYrange().first << ", "
-                //     << surface.getYrange().second << endl;
                 int j = 0;
+
+                // A is the matrix having coordinates of all points
                 Eigen::MatrixXd A ;
                 A.resize(surface.getNumberOfPoints()+1,3);
                 for (auto Pt:surface.getPoints()) {
@@ -367,26 +381,43 @@ void realsensePointCloud() {
                     j++;
                 }
 
-                // subtracting mean of all points from the entire matrix
+                // subtracting mean of all points from the entire matrix - acc to formula
                 A = A.rowwise() - Eigen::Vector3d(A.col(0).mean(), A.col(1).mean(), A.col(2).mean()).transpose();
                 Eigen::BDCSVD<Eigen::MatrixXd> svd;
                 svd.compute(A, Eigen::ComputeFullV);
+
+                // The 3 columns of V represent the 3 axes x,y,z respectively of the new surface
                 auto v = svd.matrixV();
                 cout << "V matrix for " << i << " : " << endl << v << endl;
-                auto newCoordinates = v.block(0,0,1,1) * A(Eigen::placeholders::all,vector<int> {0,1}).transpose();
 
-                // find max coordinates and save them with z axes from newCoordinates
+                // transformed PointCloud wrt to the new axes from V
+                auto newCoordinates = v * A.transpose(); //(Eigen::placeholders::all,vector<int> {0,1})
 
-                if(i == 0){
-                    B = B + v;
-                }
-                i++;
+                vector <double> x_range(2);
+                vector <double> y_range(2);
+                x_range[0] = newCoordinates.rowwise().minCoeff()(0);
+                y_range[0] = newCoordinates.rowwise().minCoeff()(1);
+                x_range[1] = newCoordinates.rowwise().maxCoeff()(0);
+                y_range[1] = newCoordinates.rowwise().maxCoeff()(1);
+
+                singleSurface["surfaceNumber"] = i;
+                singleSurface["coordinateAxes"] = v;
+                singleSurface["xRange"] = x_range;
+                singleSurface["yRange"] = y_range;
+
+                cout << "Max coordinates in new dimension -"<<endl <<"x = "<<x_range[1]<<" and y = " << y_range[1] << endl;
+                cout << "Min coordinates in new dimension -"<<endl <<"x = "<<x_range[0]<<" and y = " << y_range[0] << endl;
+
+                surfacesData[i++] = singleSurface;
             }
-
+            frame["surfacesData"] = surfacesData;
             draw_pointcloud(app, app_state, layers);
+            tracking.push_back(frame);
         }
-        B.colwise().normalize();
-        cout<<"Average V matrix = "<< endl << B;
+
+        string timeStr = convertChronoToStringWithSubsecondsCustomJoin(SystemClock::now(), "_");
+        string demonstrationFile = "../data/surfaceData_" + timeStr + ".json";
+        writeJsonFile(demonstrationFile, tracking);
     }
     catch (const rs2::error &e) {
         cerr << "RealSense error calling " << e.get_failed_function() << "(" << e.get_failed_args()
