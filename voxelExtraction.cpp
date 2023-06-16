@@ -37,7 +37,7 @@ bool sortbysec(pair<PointXYZ, int> const &a,
 
 int findMin(double *x) {
 
-    cout << "x = " << x[0] << endl << x[1] << endl<<x[2]<<endl;
+    cout << "x = " << x[0] << endl << x[1] << endl << x[2] << endl;
     double min_val = 100.0;
     int min_index = 0;
     for (int i = 0; i < maxIntermediaryPoints; ++i) {
@@ -74,16 +74,6 @@ int main() {
     octree::OctreePointCloud<pcl::PointXYZ>::AlignedPointTVector centers[number_of_clouds];
     // for each point cloud exists a vector of pairs (of coord of center's voxel and number of points in that voxel)
     vector<vector<pair<PointXYZ, int>>> pairs(number_of_clouds);
-    Posed qq;
-    vector<double> src2 =data[0][10]["objects"]["BowlGreyIkeaInstance"]["geometryPose"];
-    qq.fromCoefficients(src2);
-    auto t2 = qq.getTranslation();
-    cout<<"bowl location = "<<t2.x()<<", "<<t2.y()<<", "<<t2.z()<<endl;
-
-    vector<double> src3 = data[0][10]["objects"]["DrinkingMugTUM-MPIInstance"]["geometryPose"];
-    qq.fromCoefficients(src3);
-    auto t3 = qq.getTranslation();
-    cout<<"mug location = "<<t3.x()<<", "<<t3.y()<<", "<<t3.z()<<endl;
 
     //Point Cloud and Octree generation
     for (int k = 0; k < number_of_clouds; k++) {
@@ -94,7 +84,7 @@ int main() {
         clouds[k]->height = 1;
         clouds[k]->points.resize(clouds[k]->width * clouds[k]->height);
 
-        for (int i = 0; i < data[k].size()-1; ++i) {
+        for (int i = 0; i < data[k].size() - 1; ++i) {
             // the manipulated object instance here is assumed to be MilkCartonLidlInstance1
             vector<double> src = data[k][i]["objects"]["MilkCartonLidlInstance1"]["geometryPose"];
             q.fromCoefficients(src);
@@ -103,27 +93,27 @@ int main() {
             (*clouds[k])[i].y = t.y();
             (*clouds[k])[i].z = t.z();
             cout << t.transpose() << endl;
-            cout<<"i = "<<i<<endl;
-            if(i == 285){
-                cout<<endl<<"done"<<endl;
+            cout << "i = " << i << endl;
+            if (i == 285) {
+                cout << endl << "done" << endl;
             }
         }
-        cout<<"CLOUD FINISHED!!!!!";
+        cout << "CLOUD FINISHED!!!!!";
         octree[k].setInputCloud(clouds[k]);         // octree2.OctreePointCloud::setInputCloud(clouds[1]);
         octree[k].addPointsFromInputCloud();
         voxelNum[k] = octree[k].getOccupiedVoxelCenters(centers[k]);
-        cout<<"CLOUD SET!";
+        cout << "CLOUD SET!";
 
     }
 
     cout << "TOTAL NUMBER OF VOXELS = " << voxelNum[0] << " and " << voxelNum[1];
 
-
-    for (int k=0; k < number_of_clouds; k++) {
+    // Getting voxel density and sorting them in decreasing order
+    for (int k = 0; k < number_of_clouds; k++) {
         for (int i = 0; i < voxelNum[k]; i++) {
 
             cout << centers[k][i]; // printing i-th center of k-th point cloud
-            // OctreePointCloud inherits from OctreePointCloudDensity
+
             cout << "   No. of points at this voxel = " << octree[k].getVoxelDensityAtPoint(centers[k][i]) << endl;
             pairs[k].push_back({centers[k][i], octree[k].getVoxelDensityAtPoint(centers[k][i])});
         }
@@ -132,22 +122,21 @@ int main() {
         cout << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << endl;
     }
 
-    // Maximum number of Intermediary points expected in all the demonstrations -
+    // TODO : Maximum number of Intermediary points expected in all the demonstrations -
 
-    cout << "no problemo" << endl;
-
-    // setting all distances as 100 meters, so that it isnt recognized as minimum
+    // Setting all distances as 100 meters, so that it isnt recognized as minimum
     double dist[number_of_clouds - 1][number_of_clouds][maxIntermediaryPoints][maxIntermediaryPoints] = {0};
-    for (auto & k : dist) {
-        for (auto & h : k) {
-            for (auto & i : h) {
-                for (double & j : i) {
+    for (auto &k : dist) {
+        for (auto &h : k) {
+            for (auto &i : h) {
+                for (double &j : i) {
                     j = 100.0;
                 }
             }
         }
     }
 
+    // Calculating distance between the maxIntermediaryPoints amongst each other
     for (int k = 0; k < number_of_clouds - 1; k++) {
         for (int h = k + 1; h < number_of_clouds; h++) {
 
@@ -162,28 +151,29 @@ int main() {
         }
     }
 
-
+    // Finding minimum distance between Intermediary Points from the first cloud
     for (int k = 0; k < maxIntermediaryPoints; k++) {
 
-        cout<<endl<<"Intermediary Point no. - "<<k<<endl;
+        cout << endl << "Intermediary Point no. - " << k << endl;
         vector<int> min_index;
         min_index.push_back(k);
 
         for (int h = 1; h < number_of_clouds; h++) {
 
-            cout<<"Cloud no.- " <<h<<endl;
+            cout << "Cloud no.- " << h << endl;
             int a = findMin(dist[0][h][k]);
             cout << "a = " << a << endl;
 
             if (dist[0][h][k][a] < maxDistance) {
                 min_index.push_back(a);
-            }
-            else{
+            } else {
                 min_index.push_back(-1);
             }
         }
-        cout << "min_index = "<<min_index[1]<<" and "<<min_index[2]<<endl;
+        cout << "min_index = " << min_index[1] << " and " << min_index[2] << endl;
 
+        // Confirming that all detected points which are in proximity to 1st PointCloud
+        // are also in close proximity to each other
         int flag = 0;
         for (int i = 1; i < number_of_clouds - 1; i++) {
             for (int j = i + 1; j < number_of_clouds; j++) {
@@ -193,36 +183,38 @@ int main() {
                 int ctr2;
                 ctr2 = min_index[j];
 
-                if(ctr1 < 0 || ctr2 < 0 || ctr1 > maxIntermediaryPoints || ctr2 > maxIntermediaryPoints){
+                // If flag == 1, then some wrong value was detected
+                if (ctr1 < 0 || ctr2 < 0 || ctr1 > maxIntermediaryPoints || ctr2 > maxIntermediaryPoints) {
                     flag = 1;
                     continue;
                 }
+
+                // Distance between object and voxel was too much!
                 if (dist[i][j][ctr1][ctr2] >= maxDistance) {
                     flag = 1;
                 }
             }
         }
 
+        // Confirming the acquired data from user
         char ch;
         string str;
         if (flag == 0) {
 
-            cout << "Intermediary Point found at " << pairs[0][k].first<<endl;
-            cout << "Was the detected Intermediary Point intended in the demonstrations? y/N"<<endl;
+            cout << "Intermediary Point found at " << pairs[0][k].first << endl;
+            cout << "Was the detected Intermediary Point intended in the demonstrations? y/N" << endl;
             cin >> ch;
 
-            if(ch == 'y' || ch == 'Y'){
-                cout << "Please give the object's name - "<<endl;
+            if (ch == 'y' || ch == 'Y') {
+                cout << "Please give the object's name - " << endl;
                 cin >> str;
-                cout << "Object - "<<str<<" set at "<<pairs[0][k].first<<endl;
+                cout << "Object - " << str << " set at " << pairs[0][k].first << endl;
             }
-            if(ch == 'n' || ch == 'N'){
+            if (ch == 'n' || ch == 'N') {
                 cout << "Point deleted";
             }
-        }
-
-        else {
-            cout<< "No point found";
+        } else {
+            cout << "No point found";
         }
 
 

@@ -147,27 +147,7 @@ public:
     explicit Surface(PCL surfacePoints, pcl::ModelCoefficients coefficients) :
             points(std::move(surfacePoints)), coefficients(std::move(coefficients)) {
         // TODO: compute the surface range here!
-        double maxx = -100, maxy = -100;
-        double minx = 100, miny = 100;
         ctr = 0;
-        for (auto Pt:points) {
-            ctr++;
-
-            if (Pt.x > maxx) {
-                maxx = Pt.x;
-            }
-            if (Pt.x < minx) {
-                minx = Pt.x;
-            }
-            if (Pt.y > maxy) {
-                maxy = Pt.y;
-            }
-            if (Pt.y < miny) {
-                miny = Pt.y;
-            }
-            rangeX = {maxx, minx};
-            rangeY = {maxy, miny};
-        }
     }
 
     PCL const &getPoints() const {
@@ -177,18 +157,10 @@ public:
     PCL &getPoints() {
         return this->points;
     }
-    int getNumberOfPoints() const{
+
+    int getNumberOfPoints() const {
         return ctr;
     }
-
-    std::pair<double, double> const getXrange() const {
-        return rangeX;
-    }
-
-    std::pair<double, double> const getYrange() const {
-        return rangeY;
-    }
-
 
 protected:
     PCL points;
@@ -196,6 +168,7 @@ protected:
     std::pair<double, double> rangeX, rangeY;
     int ctr;
 };
+
 
 class SurfaceExtractor {
 public:
@@ -363,7 +336,7 @@ void realsensePointCloud() {
             frame["numberOfSurfaces"] = surfaces.size();
 
             int i = 0;
-            vector <json> surfacesData(surfaces.size());
+            vector<json> surfacesData(surfaces.size());
             for (auto const &surface: surfaces) {
 
                 json singleSurface;
@@ -371,10 +344,10 @@ void realsensePointCloud() {
                 int j = 0;
 
                 // A is the matrix having coordinates of all points
-                Eigen::MatrixXd A ;
-                A.resize(surface.getNumberOfPoints()+1,3);
+                Eigen::MatrixXd A;
+                A.resize(surface.getNumberOfPoints() + 1, 3);
                 for (auto Pt:surface.getPoints()) {
-                    if (j > surface.getNumberOfPoints()){
+                    if (j > surface.getNumberOfPoints()) {
                         break;
                     }
                     A.row(j) = Eigen::Vector3d(Pt.x, Pt.y, Pt.z);
@@ -382,7 +355,11 @@ void realsensePointCloud() {
                 }
 
                 // subtracting mean of all points from the entire matrix - acc to formula
-                A = A.rowwise() - Eigen::Vector3d(A.col(0).mean(), A.col(1).mean(), A.col(2).mean()).transpose();
+                A = A.rowwise() - Eigen::Vector3d(
+                        A.col(0).mean(),
+                        A.col(1).mean(),
+                        A.col(2).mean()).transpose();
+
                 Eigen::BDCSVD<Eigen::MatrixXd> svd;
                 svd.compute(A, Eigen::ComputeFullV);
 
@@ -393,12 +370,17 @@ void realsensePointCloud() {
                 // transformed PointCloud wrt to the new axes from V
                 auto newCoordinates = v * A.transpose(); //(Eigen::placeholders::all,vector<int> {0,1})
 
-                vector <double> x_range { newCoordinates.rowwise().minCoeff()(0), newCoordinates.rowwise().maxCoeff()(0) };
-                vector <double> y_range { newCoordinates.rowwise().minCoeff()(1), newCoordinates.rowwise().maxCoeff()(1) };
+                vector<double> x_range{
+                        newCoordinates.rowwise().minCoeff()(0),
+                        newCoordinates.rowwise().maxCoeff()(0)};
+                vector<double> y_range{
+                        newCoordinates.rowwise().minCoeff()(1),
+                        newCoordinates.rowwise().maxCoeff()(1)};
 
-                vector <double> origin{ newCoordinates.rowwise().minCoeff()(0) + newCoordinates.rowwise().maxCoeff()(0) / 2,
-                                        newCoordinates.rowwise().minCoeff()(1) + newCoordinates.rowwise().maxCoeff()(1) / 2,
-                                        newCoordinates.rowwise().minCoeff()(2) + newCoordinates.rowwise().maxCoeff()(2) / 2 };
+                vector<double> origin{
+                        newCoordinates.rowwise().minCoeff()(0) + newCoordinates.rowwise().maxCoeff()(0) / 2,
+                        newCoordinates.rowwise().minCoeff()(1) + newCoordinates.rowwise().maxCoeff()(1) / 2,
+                        newCoordinates.rowwise().minCoeff()(2) + newCoordinates.rowwise().maxCoeff()(2) / 2};
 
                 singleSurface["origin"] = origin;
                 singleSurface["surfaceNumber"] = i;
@@ -408,8 +390,10 @@ void realsensePointCloud() {
                 singleSurface["xRange"] = x_range;
                 singleSurface["yRange"] = y_range;
 
-                cout << "Max coordinates in new dimension -"<<endl <<"x = "<<x_range[1]<<" and y = " << y_range[1] << endl;
-                cout << "Min coordinates in new dimension -"<<endl <<"x = "<<x_range[0]<<" and y = " << y_range[0] << endl;
+                cout << "Max coordinates in new dimension -" << endl << "x = " << x_range[1] << " and y = "
+                     << y_range[1] << endl;
+                cout << "Min coordinates in new dimension -" << endl << "x = " << x_range[0] << " and y = "
+                     << y_range[0] << endl;
 
                 surfacesData[i++] = singleSurface;
             }
