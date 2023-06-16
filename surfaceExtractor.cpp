@@ -393,15 +393,18 @@ void realsensePointCloud() {
                 // transformed PointCloud wrt to the new axes from V
                 auto newCoordinates = v * A.transpose(); //(Eigen::placeholders::all,vector<int> {0,1})
 
-                vector <double> x_range(2);
-                vector <double> y_range(2);
-                x_range[0] = newCoordinates.rowwise().minCoeff()(0);
-                y_range[0] = newCoordinates.rowwise().minCoeff()(1);
-                x_range[1] = newCoordinates.rowwise().maxCoeff()(0);
-                y_range[1] = newCoordinates.rowwise().maxCoeff()(1);
+                vector <double> x_range { newCoordinates.rowwise().minCoeff()(0), newCoordinates.rowwise().maxCoeff()(0) };
+                vector <double> y_range { newCoordinates.rowwise().minCoeff()(1), newCoordinates.rowwise().maxCoeff()(1) };
 
+                vector <double> origin{ newCoordinates.rowwise().minCoeff()(0) + newCoordinates.rowwise().maxCoeff()(0) / 2,
+                                        newCoordinates.rowwise().minCoeff()(1) + newCoordinates.rowwise().maxCoeff()(1) / 2,
+                                        newCoordinates.rowwise().minCoeff()(2) + newCoordinates.rowwise().maxCoeff()(2) / 2 };
+
+                singleSurface["origin"] = origin;
                 singleSurface["surfaceNumber"] = i;
-                singleSurface["coordinateAxes"] = v;
+                singleSurface["xAxis"] = v.col(0);
+                singleSurface["yAxis"] = v.col(1);
+                singleSurface["zAxis"] = v.col(2);
                 singleSurface["xRange"] = x_range;
                 singleSurface["yRange"] = y_range;
 
