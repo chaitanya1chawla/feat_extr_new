@@ -146,8 +146,9 @@ public:
 
     explicit Surface(PCL surfacePoints, pcl::ModelCoefficients coefficients) :
             points(std::move(surfacePoints)), coefficients(std::move(coefficients)) {
-        // TODO: compute the surface range here!
         ctr = 0;
+        ctr = this->points.size();
+
     }
 
     PCL const &getPoints() const {
@@ -165,7 +166,6 @@ public:
 protected:
     PCL points;
     pcl::ModelCoefficients coefficients;
-    std::pair<double, double> rangeX, rangeY;
     int ctr;
 };
 
@@ -345,12 +345,14 @@ void realsensePointCloud() {
 
                 // A is the matrix having coordinates of all points
                 Eigen::MatrixXd A;
+                cout << "No. of Points = "<<surface.getNumberOfPoints()<<endl;
                 A.resize(surface.getNumberOfPoints() + 1, 3);
                 for (auto Pt:surface.getPoints()) {
-                    if (j > surface.getNumberOfPoints()) {
-                        break;
-                    }
+                    //if (j > surface.getNumberOfPoints()) {
+                    //    break;
+                    //}
                     A.row(j) = Eigen::Vector3d(Pt.x, Pt.y, Pt.z);
+                    //cout << "New point = " << Eigen::Vector3d(Pt.x, Pt.y, Pt.z);
                     j++;
                 }
 
@@ -361,6 +363,7 @@ void realsensePointCloud() {
                         A.col(2).mean()).transpose();
 
                 Eigen::BDCSVD<Eigen::MatrixXd> svd;
+                //cout<<"A matrix = "<<A<<endl;
                 svd.compute(A, Eigen::ComputeFullV);
 
                 // The 3 columns of V represent the 3 axes x,y,z respectively of the new surface

@@ -22,8 +22,8 @@ using namespace Eigen;
 int main(){
     cout << "Hello World!" << endl;
     json data = readJsonFile("../data/demonstration_2023-05-19-16-25-09_343253856.json");
-    // TODO: fill address - 
-    json surface = readJsonFile("../data/surfaceData_");
+    // TODO: fill address -
+    json surface = readJsonFile("../data/surfaceData_2023-06-21-11-41-19_799229444.json");
 
     Eigen::Matrix3d A;
 
@@ -34,28 +34,31 @@ int main(){
         q.fromCoefficients(src);
         auto t = q.getTranslation();
 
-        // extracting the axes of the surface - 
-        vector<double> x_axis = surface[i]["surfacesData"][0]["xAxis"]
-        vector<double> y_axis = surface[i]["surfacesData"][0]["yAxis"]
-        vector<double> z_axis = surface[i]["surfacesData"][0]["zAxis"]
-        vector<double> x_range = surface[i]["surfacesData"][0]["xRange"]
-        vector<double> y_range = surface[i]["surfacesData"][0]["yRange"]
+        // extracting the axes of the surface -
+        // Taking data of surface number 0 -
+        vector<double> x_axis = surface[i]["surfacesData"][0]["xAxis"];
+        vector<double> y_axis = surface[i]["surfacesData"][0]["yAxis"];
+        vector<double> z_axis = surface[i]["surfacesData"][0]["zAxis"];
+        vector<double> x_range = surface[i]["surfacesData"][0]["xRange"];
+        vector<double> y_range = surface[i]["surfacesData"][0]["yRange"];
         
-        A.col(0) = x_axis; 
-        A.col(1) = y_axis;
-        A.col(2) = z_axis;
+        A.col(0) = Vector3d(x_axis.data());
+        A.col(1) = Vector3d(y_axis.data());
+        A.col(2) = Vector3d(z_axis.data());
 
         // check!
-        Eigen::Vector3d newCoordinates =  Eigen::Vector3d(t.x, t.y, t.z) * A;
+        Eigen::Vector3d newCoordinates =  Eigen::Vector3d(t.x(), t.y(), t.z()).transpose() * A;
 
 
-        if (newCoordinates(0) > x_range(0) && newCoordinates(0) < x_range(1) &&
-            newCoordinates(1) > y_range(0) && newCoordinates(1) < y_range(1) &&
-            newCoordinates(2) < 0.05 ) { 
+        if (newCoordinates(0) > x_range[0] && newCoordinates(0) < x_range[1] &&
+            newCoordinates(1) > y_range[0] && newCoordinates(1) < y_range[1] &&
+            newCoordinates(2) < 0.15 ) {
                 
-                // z coordinate is max 5 cm away from the surface
-                cout << "Object is in surface limits"
+                // z coordinate is max 15 cm away from the surface
+                cout << "Object is in surface limits"<<endl;
             }
+        else
+            cout<<"Outside bounds!"<<endl;
         
 
     }
