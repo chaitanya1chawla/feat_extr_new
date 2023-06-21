@@ -18,17 +18,26 @@
 #include <pcl/filters/passthrough.h>
 #include <Eigen/Dense>
 
+#include <AndreiUtils/classes/camera/ImageCaptureParametersWithIntrinsics.h>
 #include <AndreiUtils/utilsJson.h>
+#include <AndreiUtils/utilsJsonEigen.hpp>
+#include <AndreiUtils/utilsOpenCV.hpp>
+#include <AndreiUtils/utilsRealsense.h>
+#include <AndreiUtils/utilsOpenCVRealsense.h>
 #include <AndreiUtils/utilsTime.h>
+#include <MarkerDetectionLib/AprilTagDetectorWithOpenCV.h>
+#include <MarkerDetectionLib/utils/utils.h>
 #include <chrono>
 
 #include "example.hpp"
 
+using namespace AndreiUtils;
 using namespace cv;
+using namespace Eigen;
+using namespace MarkerDetectionLib;
 using namespace pcl;
 using namespace rs2;
 using namespace std;
-using namespace AndreiUtils;
 using json = nlohmann::json;
 
 // Struct for managing rotation of pointcloud view
@@ -266,6 +275,28 @@ protected:
     pcl::SACSegmentation<P> seg;
 };
 
+bool findGroundInImage(Posed &groundPose, rs2::video_frame &color, rs2::depth_frame &depth, AprilTagDetectorWithOpenCV &detector,
+                       int const &groundMarkerId) {
+    ImageCaptureParametersWithIntrinsics intrinsics;
+    AndreiUtils::convertRealsenseIntrinsicsToCameraIntrinsicParameters(
+            color.get_profile().as<rs2::video_stream_profile>().get_intrinsics(),
+            intrinsics.size, intrinsics.intrinsics);
+    cv::Mat colorImage = convertFrameToMat(color);
+    cv::Mat depthImage = convertDepthFrameToMeters(depth);
+    cv::resize(depthImage, depthImage, {intrinsics.size.w, intrinsics.size.h});
+    auto getDepth = getMatrixElementAccessorWithReferenceToData<double, float>(depthImage);
+    vector<MarkerDetection> detections = detector.detectMarkers(colorImage, intrinsics.intrinsics, &getDepth,
+                                                                intrinsics.size);
+    bool foundGround = false;
+    for (auto const &detection: detections) {
+        if (detection.getId() == groundMarkerId) {
+            foundGround = true;
+            groundPose = detection.getPoseTagToCamera();
+        }
+    }
+    return foundGround;
+}
+
 void realsensePointCloud() {
 
     // Helper functions
@@ -299,6 +330,9 @@ void realsensePointCloud() {
 
         Eigen::Matrix3d B;
 
+        AprilTagDetectorWithOpenCV detector("AprilTagDetector");
+        int groundMarkerId = 209;
+
         cv::Mat displayImage(100, 100, CV_8UC3);
         int frameNumber = 0;
 
@@ -316,6 +350,12 @@ void realsensePointCloud() {
             pc.map_to(color);
 
             auto depth = frames.get_depth_frame();
+
+            Posed groundPoseRelativeToCamera, cameraToGround;
+            if (!findGroundInImage(groundPoseRelativeToCamera, color, depth, detector, groundMarkerId)) {
+                continue;
+            }
+            cameraToGround = groundPoseRelativeToCamera.inverse();
 
             // Generate the pointcloud and texture mappings
             points = pc.calculate(depth);
@@ -345,22 +385,25 @@ void realsensePointCloud() {
 
                 // A is the matrix having coordinates of all points
                 Eigen::MatrixXd A;
-                cout << "No. of Points = "<<surface.getNumberOfPoints()<<endl;
+                cout << "No. of Points = " << surface.getNumberOfPoints() << endl;
                 A.resize(surface.getNumberOfPoints() + 1, 3);
-                for (auto Pt:surface.getPoints()) {
+                for (auto Pt: surface.getPoints()) {
                     //if (j > surface.getNumberOfPoints()) {
                     //    break;
                     //}
-                    A.row(j) = Eigen::Vector3d(Pt.x, Pt.y, Pt.z);
+                    A.row(j) = cameraToGround.transform(Eigen::Vector3d(Pt.x, Pt.y, Pt.z));
                     //cout << "New point = " << Eigen::Vector3d(Pt.x, Pt.y, Pt.z);
                     j++;
                 }
 
-                // subtracting mean of all points from the entire matrix - acc to formula
-                A = A.rowwise() - Eigen::Vector3d(
+                // origin = A.rowwise().mean();
+                Eigen::Vector3d origin = Eigen::Vector3d(
                         A.col(0).mean(),
                         A.col(1).mean(),
-                        A.col(2).mean()).transpose();
+                        A.col(2).mean());
+
+                // subtracting mean of all points from the entire matrix - to bring surface to its origin
+                A = A.rowwise() - origin.transpose();
 
                 Eigen::BDCSVD<Eigen::MatrixXd> svd;
                 //cout<<"A matrix = "<<A<<endl;
@@ -380,16 +423,16 @@ void realsensePointCloud() {
                         newCoordinates.rowwise().minCoeff()(1),
                         newCoordinates.rowwise().maxCoeff()(1)};
 
-                vector<double> origin{
-                        newCoordinates.rowwise().minCoeff()(0) + newCoordinates.rowwise().maxCoeff()(0) / 2,
-                        newCoordinates.rowwise().minCoeff()(1) + newCoordinates.rowwise().maxCoeff()(1) / 2,
-                        newCoordinates.rowwise().minCoeff()(2) + newCoordinates.rowwise().maxCoeff()(2) / 2};
+                // vector<double> origin{
+                //         newCoordinates.rowwise().minCoeff()(0) + newCoordinates.rowwise().maxCoeff()(0) / 2,
+                //         newCoordinates.rowwise().minCoeff()(1) + newCoordinates.rowwise().maxCoeff()(1) / 2,
+                //         newCoordinates.rowwise().minCoeff()(2) + newCoordinates.rowwise().maxCoeff()(2) / 2};
 
                 singleSurface["origin"] = origin;
                 singleSurface["surfaceNumber"] = i;
-                singleSurface["xAxis"] = v.col(0);
-                singleSurface["yAxis"] = v.col(1);
-                singleSurface["zAxis"] = v.col(2);
+                singleSurface["xAxis"] = Eigen::Vector3d{v.col(0)}.normalized();
+                singleSurface["yAxis"] = Eigen::Vector3d{v.col(1)}.normalized();
+                singleSurface["zAxis"] = Eigen::Vector3d{v.col(0)}.cross(Eigen::Vector3d{v.col(1)}).normalized();
                 singleSurface["xRange"] = x_range;
                 singleSurface["yRange"] = y_range;
 
@@ -508,6 +551,10 @@ void draw_pointcloud(window &app, state &app_state, const std::vector<pcl_ptr> &
 
 int main() {
     cout << "Hello, World!" << endl;
+
+    auto config = readJsonFile("../config/surfaceExtractionArguments.json");
+    MarkerDetectionLib::setConfigurationParameters(
+            ConfigurationParameters(config.at("MarkerDetectionLib"), "MarkerDetectionLib"));
 
     // testSurfaceExtraction();
     realsensePointCloud();

@@ -1,0 +1,21 @@
+{
+    "MarkerDetectionLib": {
+        "parametersFor": "MarkerDetectionLib",
+        "AprilTagDetector": {
+            "parametersFor": "AprilTagDetector",
+            "tag_family": "tag36h11",
+            "threads": 4,
+            "hamming": 1,
+            "debug": false,
+            "quiet": false,
+            "refine-edges": true,
+            "decimate": 2.0,
+            "blur": 0.0,
+            "verbose": false,
+            "uponWrongDepthPointAcceptEstimation": false
+        },
+        "TagSizes": {
+            "TagSizesConfigFile": "/usr/local/src/MarkerDetectionLib/config/tagSizes.json"
+        }
+    }
+}

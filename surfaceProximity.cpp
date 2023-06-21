@@ -10,6 +10,7 @@
 
 #include <iterator>
 #include <AndreiUtils/utilsJson.h>
+#include <AndreiUtils/utilsJsonEigen.hpp>
 #include <AndreiUtils/classes/DualQuaternion.hpp>
 
 
@@ -19,47 +20,61 @@ using namespace std;
 using namespace Eigen;
 
 
-int main(){
+int main() {
     cout << "Hello World!" << endl;
-    json data = readJsonFile("../data/demonstration_2023-05-19-16-25-09_343253856.json");
+    vector<json> data = readJsonFile("../data/demonstration_2023-06-21-18-53-52_129873292.json").get<vector<json>>();
+    cout << "Json data size = " << data.size() << endl;
     // TODO: fill address -
-    json surface = readJsonFile("../data/surfaceData_2023-06-21-11-41-19_799229444.json");
+    json surface = readJsonFile("../data/surfaceData_2023-06-21-18-56-48_899605557.json");
 
     Eigen::Matrix3d A;
 
     Posed q;
-    for (int i = 0; i < min(surface.size(), data.size()) - 1; ++i) {
 
-        vector<double> src = data[i]["objects"]["BowlGreyIkeaInstance"]["geometryPose"];
-        q.fromCoefficients(src);
+    for (int i = 0; i < min(surface.size(), data.size()) - 2; ++i) {
+        if (!data[i].contains("objects")) {
+            continue;
+        }
+        auto &objects = data[i].at("objects");
+        if (!objects.contains("MilkCartonLidlInstance1")) {
+            continue;
+        }
+        auto &milkCarton = data[i].at("objects").at("MilkCartonLidlInstance1");
+        q = milkCarton.at("geometryPose").get<Posed>();
+        cout << q << endl;
+
         auto t = q.getTranslation();
 
         // extracting the axes of the surface -
         // Taking data of surface number 0 -
-        vector<double> x_axis = surface[i]["surfacesData"][0]["xAxis"];
-        vector<double> y_axis = surface[i]["surfacesData"][0]["yAxis"];
-        vector<double> z_axis = surface[i]["surfacesData"][0]["zAxis"];
-        vector<double> x_range = surface[i]["surfacesData"][0]["xRange"];
-        vector<double> y_range = surface[i]["surfacesData"][0]["yRange"];
-        
+        vector<double> x_axis = surface[i]["surfacesData"][2]["xAxis"];
+        vector<double> y_axis = surface[i]["surfacesData"][2]["yAxis"];
+        vector<double> z_axis = surface[i]["surfacesData"][2]["zAxis"];
+        vector<double> x_range = surface[i]["surfacesData"][2]["xRange"];
+        vector<double> y_range = surface[i]["surfacesData"][2]["yRange"];
+
         A.col(0) = Vector3d(x_axis.data());
         A.col(1) = Vector3d(y_axis.data());
         A.col(2) = Vector3d(z_axis.data());
 
         // check!
-        Eigen::Vector3d newCoordinates =  Eigen::Vector3d(t.x(), t.y(), t.z()).transpose() * A;
+        Eigen::Vector3d newCoordinates = A * Eigen::Vector3d(t.x(), t.y(), t.z());
 
+        try {
+            if (newCoordinates(0) > x_range[0] && newCoordinates(0) < x_range[1] &&
+                newCoordinates(1) > y_range[0] && newCoordinates(1) < y_range[1] &&
+                newCoordinates(2) < 0.10) {
 
-        if (newCoordinates(0) > x_range[0] && newCoordinates(0) < x_range[1] &&
-            newCoordinates(1) > y_range[0] && newCoordinates(1) < y_range[1] &&
-            newCoordinates(2) < 0.15 ) {
-                
                 // z coordinate is max 15 cm away from the surface
-                cout << "Object is in surface limits"<<endl;
-            }
-        else
-            cout<<"Outside bounds!"<<endl;
-        
+                cout << "Object is in surface limits" << endl;
+            } else
+                cout << "Outside bounds!" << endl;
+        }
+
+        catch (const exception &e) {
+
+        }
+
 
     }
 
