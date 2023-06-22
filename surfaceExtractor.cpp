@@ -64,7 +64,8 @@ using pcl_ptr = pcl::PointCloud<pcl::PointXYZ>::Ptr;
 // Helper functions
 void register_glfw_callbacks(window &app, state &app_state);
 
-void draw_pointcloud(window &app, state &app_state, std::vector<pcl_ptr> const &points, Eigen::MatrixXd &allAxes);
+void draw_pointcloud(window &app, state &app_state, std::vector<pcl_ptr> const &points, Eigen::MatrixXd &allAxes,
+                     Posed &cameraToGround);
 
 void printPoint(pcl::PointXYZ const &point) {
     cout << point.x << " " << point.y << " " << point.z << endl;
@@ -455,7 +456,7 @@ void realsensePointCloud() {
                 surfacesData[surfaceCounter++] = singleSurface;
             }
             frame["surfacesData"] = surfacesData;
-            draw_pointcloud(app, app_state, layers, allAxes);
+            draw_pointcloud(app, app_state, layers, allAxes, groundPoseRelativeToCamera);
             tracking.push_back(frame);
         }
 
@@ -506,7 +507,8 @@ void register_glfw_callbacks(window &app, state &app_state) {
 }
 
 // Handles all the OpenGL calls needed to display the point cloud
-void draw_pointcloud(window &app, state &app_state, const std::vector<pcl_ptr> &points, Eigen::MatrixXd &allAxes) {
+void draw_pointcloud(window &app, state &app_state, const std::vector<pcl_ptr> &points, Eigen::MatrixXd &allAxes,
+                     Posed &cameraToGround) {
     // OpenGL commands that prep screen for the pointcloud
     glPopMatrix();
     glPushAttrib(GL_ALL_ATTRIB_BITS);
@@ -535,6 +537,7 @@ void draw_pointcloud(window &app, state &app_state, const std::vector<pcl_ptr> &
     int color = 0;
     int counter = 0;
 
+
     for (auto &&pc: points) {
         auto c = colors[(color++) % (sizeof(colors) / sizeof(float3))];
         // cout << "Color of surface"<<counter++<<" = "<< <<endl;
@@ -554,28 +557,54 @@ void draw_pointcloud(window &app, state &app_state, const std::vector<pcl_ptr> &
 
     int numberOfSurfaces = allAxes.size() / (3 * 3);
     int ctr = 0;
-
+    cout << "allAxes = " << endl << allAxes << endl;
     glBegin(GL_LINES);
-    while (ctr++ < numberOfSurfaces){
+
+
+    while (ctr < numberOfSurfaces - 1) {
+
+        if (allAxes.maxCoeff() > 100 || allAxes.minCoeff() < -100) {
+            ctr++;
+            continue;
+        }
+
+        Posed q = Posed::identity().addTranslation(allAxes.block(ctr*3, 3, 3, 1));
+        q = cameraToGround * q;
+        auto t = q.getTranslation(); // getting origin wrt to camera
+
+        q = Posed::identity().addTranslation(allAxes.block(ctr*3, 0, 3, 1) + allAxes.block(ctr*3, 3, 3, 1));
+        q = cameraToGround * q;
+        auto x_axis = q.getTranslation(); // getting x_axis wrt to camera
+
+        q = Posed::identity().addTranslation(allAxes.block(ctr*3, 1, 3, 1) + allAxes.block(ctr*3, 3, 3, 1));
+        q = cameraToGround * q;
+        auto y_axis = q.getTranslation(); // getting y_axis wrt to camera
+
+        q = Posed::identity().addTranslation(allAxes.block(ctr*3, 2, 3, 1)+ allAxes.block(ctr*3, 3, 3, 1));
+        q = cameraToGround * q;
+        auto z_axis = q.getTranslation(); // getting z_axis wrt to camera
+
         // x axis
         glColor3f(0.0f, 0.0f, 1.0f); // blue
-        glVertex3f( allAxes(ctr*3,3), allAxes(ctr*3+1,3), allAxes(ctr*3+2,3));
-        glVertex3f( allAxes(ctr*3,0), allAxes(ctr*3+1, 0), allAxes(ctr*3+2, 0));
+        glVertex3f(t.x(), t.y(), t.z());
+        glVertex3f(x_axis.x(), x_axis.y(), x_axis.z());
 
         // y axis
         glColor3f(0.0f, 1.0f, 0.0f); // green
-        glVertex3f( allAxes(ctr*3,3), allAxes(ctr*3+1,3), allAxes(ctr*3+2,3));
-        glVertex3f(allAxes(ctr*3, 1), allAxes(ctr*3+1, 1), allAxes(ctr*3+2, 1));
+        glVertex3f(t.x(), t.y(), t.z());
+        glVertex3f(y_axis.x(), y_axis.y(), y_axis.z());
 
         // z axis
         glColor3f(1.0f, 0.0f, 0.0f); // red
-        glVertex3f( allAxes(ctr*3,3), allAxes(ctr*3+1,3), allAxes(ctr*3+2,3));
-        glVertex3f(allAxes(ctr*3, 2), allAxes(ctr*3+1, 2), allAxes(ctr*3+2, 2));
+        glVertex3f(t.x(), t.y(), t.z());
+        glVertex3f(z_axis.x(), z_axis.y(), z_axis.z());
+
+        ctr++;
     }
     glEnd();
 
-        // OpenGL cleanup
-        glPopMatrix();
+    // OpenGL cleanup
+    glPopMatrix();
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
     glPopAttrib();
