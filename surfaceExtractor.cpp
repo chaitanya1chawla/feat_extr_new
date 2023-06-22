@@ -64,7 +64,7 @@ using pcl_ptr = pcl::PointCloud<pcl::PointXYZ>::Ptr;
 // Helper functions
 void register_glfw_callbacks(window &app, state &app_state);
 
-void draw_pointcloud(window &app, state &app_state, std::vector<pcl_ptr> const &points);
+void draw_pointcloud(window &app, state &app_state, std::vector<pcl_ptr> const &points, Eigen::MatrixXd &allAxes);
 
 void printPoint(pcl::PointXYZ const &point) {
     cout << point.x << " " << point.y << " " << point.z << endl;
@@ -275,7 +275,8 @@ protected:
     pcl::SACSegmentation<P> seg;
 };
 
-bool findGroundInImage(Posed &groundPose, rs2::video_frame &color, rs2::depth_frame &depth, AprilTagDetectorWithOpenCV &detector,
+bool findGroundInImage(Posed &groundPose, rs2::video_frame &color, rs2::depth_frame &depth,
+                       AprilTagDetectorWithOpenCV &detector,
                        int const &groundMarkerId) {
     ImageCaptureParametersWithIntrinsics intrinsics;
     AndreiUtils::convertRealsenseIntrinsicsToCameraIntrinsicParameters(
@@ -355,6 +356,9 @@ void realsensePointCloud() {
             if (!findGroundInImage(groundPoseRelativeToCamera, color, depth, detector, groundMarkerId)) {
                 continue;
             }
+            auto t = groundPoseRelativeToCamera.getRotationAsMatrix();
+            cout << "Rotation Matrix = " << endl << t << endl;
+
             cameraToGround = groundPoseRelativeToCamera.inverse();
 
             // Generate the pointcloud and texture mappings
@@ -375,8 +379,15 @@ void realsensePointCloud() {
             frame["index"] = frameNumber++;
             frame["numberOfSurfaces"] = surfaces.size();
 
-            int i = 0;
+            int surfaceCounter = 0;
             vector<json> surfacesData(surfaces.size());
+
+            // used to send the axes to the drawPointCloud function
+            Eigen::MatrixXd allAxes;
+            // each column represents x,y,z
+            // first 3 rows represent axes of first surfaces, second 3 rows that of second surface, and so on
+            allAxes.resize(3 * surfaces.size(), 3);
+
             for (auto const &surface: surfaces) {
 
                 json singleSurface;
@@ -388,11 +399,7 @@ void realsensePointCloud() {
                 cout << "No. of Points = " << surface.getNumberOfPoints() << endl;
                 A.resize(surface.getNumberOfPoints() + 1, 3);
                 for (auto Pt: surface.getPoints()) {
-                    //if (j > surface.getNumberOfPoints()) {
-                    //    break;
-                    //}
                     A.row(j) = cameraToGround.transform(Eigen::Vector3d(Pt.x, Pt.y, Pt.z));
-                    //cout << "New point = " << Eigen::Vector3d(Pt.x, Pt.y, Pt.z);
                     j++;
                 }
 
@@ -411,7 +418,7 @@ void realsensePointCloud() {
 
                 // The 3 columns of V represent the 3 axes x,y,z respectively of the new surface
                 auto v = svd.matrixV();
-                cout << "V matrix for " << i << " : " << endl << v << endl;
+                cout << "V matrix for " << surfaceCounter << " : " << endl << v << endl;
 
                 // transformed PointCloud wrt to the new axes from V
                 auto newCoordinates = v * A.transpose(); //(Eigen::placeholders::all,vector<int> {0,1})
@@ -423,16 +430,19 @@ void realsensePointCloud() {
                         newCoordinates.rowwise().minCoeff()(1),
                         newCoordinates.rowwise().maxCoeff()(1)};
 
-                // vector<double> origin{
-                //         newCoordinates.rowwise().minCoeff()(0) + newCoordinates.rowwise().maxCoeff()(0) / 2,
-                //         newCoordinates.rowwise().minCoeff()(1) + newCoordinates.rowwise().maxCoeff()(1) / 2,
-                //         newCoordinates.rowwise().minCoeff()(2) + newCoordinates.rowwise().maxCoeff()(2) / 2};
+                Eigen::Vector3d x_axis = Eigen::Vector3d{v.col(0)}.normalized();
+                Eigen::Vector3d y_axis = Eigen::Vector3d{v.col(1)}.normalized();
+                Eigen::Vector3d z_axis = Eigen::Vector3d{v.col(0)}.cross(Eigen::Vector3d{v.col(1)}).normalized();
+
+                allAxes.block(surfaceCounter * 3, 0, 3, 1) = x_axis;
+                allAxes.block(surfaceCounter * 3, 1, 3, 1) = y_axis;
+                allAxes.block(surfaceCounter * 3, 2, 3, 1) = z_axis;
 
                 singleSurface["origin"] = origin;
-                singleSurface["surfaceNumber"] = i;
-                singleSurface["xAxis"] = Eigen::Vector3d{v.col(0)}.normalized();
-                singleSurface["yAxis"] = Eigen::Vector3d{v.col(1)}.normalized();
-                singleSurface["zAxis"] = Eigen::Vector3d{v.col(0)}.cross(Eigen::Vector3d{v.col(1)}).normalized();
+                singleSurface["surfaceNumber"] = surfaceCounter;
+                singleSurface["xAxis"] = x_axis;
+                singleSurface["yAxis"] = y_axis;
+                singleSurface["zAxis"] = z_axis;
                 singleSurface["xRange"] = x_range;
                 singleSurface["yRange"] = y_range;
 
@@ -441,10 +451,10 @@ void realsensePointCloud() {
                 cout << "Min coordinates in new dimension -" << endl << "x = " << x_range[0] << " and y = "
                      << y_range[0] << endl;
 
-                surfacesData[i++] = singleSurface;
+                surfacesData[surfaceCounter++] = singleSurface;
             }
             frame["surfacesData"] = surfacesData;
-            draw_pointcloud(app, app_state, layers);
+            draw_pointcloud(app, app_state, layers, allAxes);
             tracking.push_back(frame);
         }
 
@@ -495,7 +505,7 @@ void register_glfw_callbacks(window &app, state &app_state) {
 }
 
 // Handles all the OpenGL calls needed to display the point cloud
-void draw_pointcloud(window &app, state &app_state, const std::vector<pcl_ptr> &points) {
+void draw_pointcloud(window &app, state &app_state, const std::vector<pcl_ptr> &points, Eigen::MatrixXd &allAxes) {
     // OpenGL commands that prep screen for the pointcloud
     glPopMatrix();
     glPushAttrib(GL_ALL_ATTRIB_BITS);
@@ -541,8 +551,30 @@ void draw_pointcloud(window &app, state &app_state, const std::vector<pcl_ptr> &
         glEnd();
     }
 
-    // OpenGL cleanup
-    glPopMatrix();
+    int numberOfSurfaces = allAxes.size() / (3 * 3);
+    int ctr =0;
+
+    glBegin(GL_LINES);
+    while (ctr++ < numberOfSurfaces){
+        // x axis
+        glColor3f(0.0f, 0.0f, 1.0f); // blue
+        glVertex3f( 1.0f, 1.0f, -1.0f);
+        glVertex3f(-1.0f, 1.0f, -1.0f);
+
+        // y axis
+        glColor3f(0.0f, 1.0f, 0.0f); // green
+        glVertex3f( 1.0f, 1.0f, -1.0f);
+        glVertex3f(-1.0f, 1.0f, -1.0f);
+
+        // z axis
+        glColor3f(1.0f, 0.0f, 0.0f); // red
+        glVertex3f( 1.0f, 1.0f, -1.0f);
+        glVertex3f(-1.0f, 1.0f, -1.0f);
+    }
+    glEnd();
+
+        // OpenGL cleanup
+        glPopMatrix();
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
     glPopAttrib();
