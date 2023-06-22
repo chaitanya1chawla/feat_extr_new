@@ -21,6 +21,7 @@ using namespace AndreiUtils;
 using namespace std;
 using namespace Eigen;
 using namespace pcl;
+
 // set here maximum number of Intermediary Points -
 int const maxIntermediaryPoints = 3;
 // set here number of input clouds/ demonstrations -

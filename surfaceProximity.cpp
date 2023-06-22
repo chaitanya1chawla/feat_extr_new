@@ -19,17 +19,28 @@ using namespace AndreiUtils;
 using namespace std;
 using namespace Eigen;
 
+// set here the index number of surface (starts from 0)-
+int const surface_index = 1;
 
 int main() {
     cout << "Hello World!" << endl;
     vector<json> data = readJsonFile("../data/demonstration_2023-06-21-18-53-52_129873292.json").get<vector<json>>();
     cout << "Json data size = " << data.size() << endl;
     // TODO: fill address -
-    json surface = readJsonFile("../data/surfaceData_2023-06-21-18-56-48_899605557.json");
+    vector<json> surface = readJsonFile("../data/surfaceData_2023-06-21-18-56-48_899605557.json").get<vector<jsin>>();
 
     Eigen::Matrix3d A;
 
     Posed q;
+    
+    // extracting the axes of the surface -
+    // Taking data of surface number 0 -
+    vector<double> x_axis = surface[20].at("surfacesData")[surface_index].at("xAxis");
+    vector<double> y_axis = surface[20].at("surfacesData")[surface_index].at("yAxis");
+    vector<double> z_axis = surface[20].at("surfacesData")[surface_index].at("zAxis");
+    vector<double> x_range = surface[20].at("surfacesData")[surface_index].at("xRange");
+    vector<double> y_range = surface[20].at("surfacesData")[surface_index].at("yRange");
+
 
     for (int i = 0; i < min(surface.size(), data.size()) - 2; ++i) {
         if (!data[i].contains("objects")) {
@@ -44,14 +55,6 @@ int main() {
         cout << q << endl;
 
         auto t = q.getTranslation();
-
-        // extracting the axes of the surface -
-        // Taking data of surface number 0 -
-        vector<double> x_axis = surface[i]["surfacesData"][2]["xAxis"];
-        vector<double> y_axis = surface[i]["surfacesData"][2]["yAxis"];
-        vector<double> z_axis = surface[i]["surfacesData"][2]["zAxis"];
-        vector<double> x_range = surface[i]["surfacesData"][2]["xRange"];
-        vector<double> y_range = surface[i]["surfacesData"][2]["yRange"];
 
         A.col(0) = Vector3d(x_axis.data());
         A.col(1) = Vector3d(y_axis.data());
