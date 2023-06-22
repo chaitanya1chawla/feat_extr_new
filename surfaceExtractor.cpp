@@ -382,11 +382,11 @@ void realsensePointCloud() {
             int surfaceCounter = 0;
             vector<json> surfacesData(surfaces.size());
 
-            // used to send the axes to the drawPointCloud function
+            // used to send the axes and origin to the drawPointCloud function
             Eigen::MatrixXd allAxes;
-            // each column represents x,y,z
-            // first 3 rows represent axes of first surfaces, second 3 rows that of second surface, and so on
-            allAxes.resize(3 * surfaces.size(), 3);
+            // each column represents x,y,z, and origin
+            // first 3 rows represent data of first surfaces, second 3 rows that of second surface, and so on
+            allAxes.resize(3 * surfaces.size(), 4);
 
             for (auto const &surface: surfaces) {
 
@@ -437,6 +437,7 @@ void realsensePointCloud() {
                 allAxes.block(surfaceCounter * 3, 0, 3, 1) = x_axis;
                 allAxes.block(surfaceCounter * 3, 1, 3, 1) = y_axis;
                 allAxes.block(surfaceCounter * 3, 2, 3, 1) = z_axis;
+                allAxes.block(surfaceCounter * 3, 3, 3, 1) = origin;
 
                 singleSurface["origin"] = origin;
                 singleSurface["surfaceNumber"] = surfaceCounter;
@@ -552,24 +553,24 @@ void draw_pointcloud(window &app, state &app_state, const std::vector<pcl_ptr> &
     }
 
     int numberOfSurfaces = allAxes.size() / (3 * 3);
-    int ctr =0;
+    int ctr = 0;
 
     glBegin(GL_LINES);
     while (ctr++ < numberOfSurfaces){
         // x axis
         glColor3f(0.0f, 0.0f, 1.0f); // blue
-        glVertex3f( 1.0f, 1.0f, -1.0f);
-        glVertex3f(-1.0f, 1.0f, -1.0f);
+        glVertex3f( allAxes(ctr*3,3), allAxes(ctr*3+1,3), allAxes(ctr*3+2,3));
+        glVertex3f( allAxes(ctr*3,0), allAxes(ctr*3+1, 0), allAxes(ctr*3+2, 0));
 
         // y axis
         glColor3f(0.0f, 1.0f, 0.0f); // green
-        glVertex3f( 1.0f, 1.0f, -1.0f);
-        glVertex3f(-1.0f, 1.0f, -1.0f);
+        glVertex3f( allAxes(ctr*3,3), allAxes(ctr*3+1,3), allAxes(ctr*3+2,3));
+        glVertex3f(allAxes(ctr*3, 1), allAxes(ctr*3+1, 1), allAxes(ctr*3+2, 1));
 
         // z axis
         glColor3f(1.0f, 0.0f, 0.0f); // red
-        glVertex3f( 1.0f, 1.0f, -1.0f);
-        glVertex3f(-1.0f, 1.0f, -1.0f);
+        glVertex3f( allAxes(ctr*3,3), allAxes(ctr*3+1,3), allAxes(ctr*3+2,3));
+        glVertex3f(allAxes(ctr*3, 2), allAxes(ctr*3+1, 2), allAxes(ctr*3+2, 2));
     }
     glEnd();
 
