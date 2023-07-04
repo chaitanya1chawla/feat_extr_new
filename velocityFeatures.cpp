@@ -52,6 +52,9 @@ int velocityLessThan(double dist, double time, int &velocityLessThanCheck, int &
 
 int velocityConstant(double val, int &velocityCtr, double &initialTimeStamp, double &finalTimeStamp, int &velocityConstantCheck){
 
+    // after comparing values, need to save first value, and do comparison with 3rd value
+    // this is done until an uncomparable value comes, that is then the ending condition
+
     // this "if" - is used when velocityConstant returns true for the first time.
     if ((val > -0.1 || val < 0.1 ) && velocityConstantCheck == 0) {
         velocityCtr = 0;
@@ -62,7 +65,7 @@ int velocityConstant(double val, int &velocityCtr, double &initialTimeStamp, dou
     else if ((val > -0.1 || val < 0.1 ) && velocityConstantCheck == 1) {
         velocityCtr++;
     }
-    // this "else if" - is used when velocityConstant is no more true and to see final time.
+    // this "else if" - is used when velocityConstant is no more true and to set final time.
     else if (!(val > -0.1 || val < 0.1 ) && velocityConstantCheck == 1) {
         finalTimeStamp = currentTimeStamp;
         velocityConstantCheck = 0;
@@ -159,9 +162,17 @@ void velocityExtract() {
     // comparing here the moving Averages -
     for (int i = 0; i < movingAvg.size() - 1; i++) {
 
-        double val = (movingAvg.at(i+1) - movingAvg.at(i))/ movingAvg.at(i);
-        velocityCtr = velocityConstant(val, velocityCtr, initialTimeStamp, finalTimeStamp,
-                                       velocityConstantCheck);
+        double val = (movingAvg.at( i + velocityCtr ) - movingAvg.at(i))/ movingAvg.at(i);
+        if(val > -0.1 && val < 0.1){
+            velocityCtr++;
+        }
+
+
+
+
+        //velocityCtr = velocityConstant(val, velocityCtr, initialTimeStamp, finalTimeStamp,
+        //                              velocityConstantCheck);
+        
         if (velocityCtr != 0 && velocityCtr % 50 == 0) {
             cout << "You kept constant velocity of -  " << max_vel;
             cout << " between time period - " << initialTimeStamp << " and " << finalTimeStamp << endl;
