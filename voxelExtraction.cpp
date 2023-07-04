@@ -51,8 +51,8 @@ int findMin(double *x) {
 }
 
 
-int main() {
-    cout << "Hello World!" << endl;
+void voxelExtract (){
+
     json data[number_of_clouds];
 
     data[0] = readJsonFile("../data/demonstration_2023-05-19-16-24-31_679894510.json");
@@ -221,6 +221,14 @@ int main() {
 
     }
 
+}
+
+
+int main() {
+    cout << "Hello World!" << endl;
+    
+    voxelExtract();
+    
     return 0;
 }
 
