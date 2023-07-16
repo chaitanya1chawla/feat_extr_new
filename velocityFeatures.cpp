@@ -112,6 +112,25 @@ int speedLinIncDec(double val, int &accCtr, int &speedLinCheck, int &speedLinfla
     return accCtr;
 }
 
+int angleConstant(double val, int &angleCtr, int &angleConstantCheck) {
+
+    // this "if" - is used when speedConstant returns true for the first time.
+    if ((val < pi/10) && angleConstantCheck == 0) {
+        angleCtr = 0;
+        angleConstantCheck = 1;
+    }
+        // this "else if" - is used to count how many times consecutively did the speedConstant returned true.
+    else if ((val < pi/10) && angleConstantCheck == 1) {
+        angleCtr++;
+    }
+        // this "else if" - is used when speedConstant is no more true and to see final time.
+    else if (!(val < pi/10) && angleConstantCheck == 1) {
+        angleConstantCheck = 0;
+    }
+
+    return angleCtr;
+}
+
 double avg_queue(queue<double> q) {
 
     double ctr = 0;
@@ -143,15 +162,19 @@ void speedExtract() {
     Posed q;
     queue<double> distQueue;
     queue<double> spdQueue;
+    queue<double> dirQueue;
     vector<double> movingAvgSpd;
     // TODO : check which of these moving average accelerations work better?
     // first one calculates the direct velocity, get the acc, and then takes moving average of acceleration.
     // second one takes the moving average velocities to calculate acc.
     vector<double> movingAvgAcc_1;
     vector<double> movingAvgAcc_2;
+    // moving average for the direction of velocity - 
+    vector<double> movingAvgDir;
     int ctr = 0;
 
 
+    // TODO : debug speedLessThan - not giving correct values (final and initial time logic also messed up)
     // checking speedLessThan and calculating all moving averages
     for (int i = 0; i < data.size() - 2; i++) {
 
@@ -188,6 +211,13 @@ void speedExtract() {
                              + pow(nextPose.y() - currentPose.y(), 2)
                              + pow(nextPose.z() - currentPose.z(), 2));
         double time_2 = nextTimeStamp - currentTimeStamp;
+
+        // TODO : check the following calculation of angle
+        Vector3d v1 = currentPose - initialPose;
+        Vector3d v2 = nextPose - currentPose;
+        double r = v1.transpose()*v2;
+        double angle = acos(r / (v1.norm()*v2.norm()) )
+
         // to count how many poses were successfully detected
         ctr++;
 
@@ -206,13 +236,16 @@ void speedExtract() {
         distQueue.push(dist_1 / time_1);
         // avg acc = Vbc - Vab / (tc-ta)
         spdQueue.push((dist_2 / time_2) - (dist_1 / time_1) / (time_2 + time_1));
+        dirQueue.push(angle);
 
         // taking moving average of last 50 values
         if (ctr >= 50) {
             movingAvgSpd.push_back(avg_queue(distQueue));
             movingAvgAcc_1.push_back(avg_queue(spdQueue));
+            movingAvgDir.push_back(avg_queue(dirQueue));
             distQueue.pop();
             spdQueue.pop();
+            dirQueue.pop();
         }
         if (movingAvgSpd.size() > 1) {
             // finds moving average acc with prev 25 values and next 25 values
@@ -228,8 +261,8 @@ void speedExtract() {
     finalTimeStamp = 0;
     int speedConstantCheck = 0;
 
-    /*
     // comparing here the moving Averages for constant speed -
+    /*
     for (int i = 0; i < movingAvgSpd.size() - 1; i++) {
         if(isnan(movingAvgSpd.at(i))){
             cout << "WTF!!";
@@ -294,8 +327,39 @@ void speedExtract() {
     }
     */
 
-    // checking for spikes in velocity (sudden direction change)
+    int angleCtr = 0;
+    initialTimeStamp = 0;
+    finalTimeStamp = 0;
+    int angleConstantCheck = 0;
 
+    // checking for spikes in velocity (sudden direction change)
+    for (int i = 0; i < movingAvgDir.size() - 1; i++) {
+        if(isnan(movingAvgDir.at(i))){
+            cout << "WTF!!";
+        }
+        cout << "moving AvgDir = " << movingAvgDir.at(i)<<endl;
+        angleCtr = angleConstant(movingAvgDir.at(i), angleCtr, angleConstantCheck);
+        if (angleCtr == 1) {
+            // the moving averages are associated with frames, s.t. we are taking
+            // moving average of 25 previous values and 25 next values
+            // Thus we take timestamp of the i+25th value, so that our avg is
+            // calculated as described
+            initialTimeStamp = data[i + 25].at("timestamp");
+        }
+
+        // if speed was kept constant for 3-4 seconds (100 frames) -
+        if (angleCtr != 0 && angleCtr % 50 == 0) {
+            finalTimeStamp = data[i + 25].at("timestamp");
+            cout << "You kept constant direction of motion";
+            cout << " between time period - " << initialTimeStamp << " and " << finalTimeStamp << endl;
+        }
+
+        // TODO : check this value - 
+        if (movingAvgDir.at(i) > pi/10){
+            cout<<"There was a sudden change in direction!"
+        }
+
+    }
 
 }
 
