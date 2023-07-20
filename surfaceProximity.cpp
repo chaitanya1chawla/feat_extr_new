@@ -21,12 +21,14 @@ using namespace Eigen;
 
 // set here the index number of surface (starts from 0)-
 int const surface_index = 0;
+// set here the acceptable distance from surface in z direction in meters - 
+double const z_dist = 0.10;
 
 int main() {
     cout << "Hello World!" << endl;
     vector<json> data = readJsonFile("../data/demonstration_2023-06-21-18-53-52_129873292.json").get<vector<json>>();
     cout << "Json data size = " << data.size() << endl;
-    // TODO: fill address -
+
     vector<json> surface = readJsonFile("../data/surfaceData_2023-06-22-14-45-37_257316435.json").get<vector<json>>();
 
     Eigen::Matrix3d A;
@@ -67,11 +69,11 @@ int main() {
 
             if (newCoordinates(0) > x_range[0] && newCoordinates(0) < x_range[1] &&
                 newCoordinates(1) > y_range[0] && newCoordinates(1) < y_range[1] &&
-                newCoordinates(2) < 0.10) {
+                newCoordinates(2) < z_dist) {
 
-                // z coordinate is max 15 cm away from the surface
                 cout << "Object is in surface limits" << endl;
-            } else
+            } 
+            else
                 cout << "Outside bounds!" << endl;
         }
 

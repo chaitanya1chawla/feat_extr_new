@@ -76,3 +76,14 @@ target_include_directories(SurfaceProximity
         )
 target_link_directories(SurfaceProximity PUBLIC ${PCL_LIBRARY_DIRS})
 target_compile_options(SurfaceProximity PUBLIC ${PCL_OPTIMIZATION_FLAGS})
+
+add_executable(VelocityFeatures velocityFeatures.cpp)
+target_link_libraries(VelocityFeatures ${AndreiUtils_LIBRARY} Eigen3::Eigen dqrobotics dqrobotics-interface-vrep ${PCL_LIBRARIES})
+target_include_directories(VelocityFeatures
+        PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+        ${PCL_INCLUDE_DIRS}
+        )
+target_link_directories(VelocityFeatures PUBLIC ${PCL_LIBRARY_DIRS})
+target_compile_options(VelocityFeatures PUBLIC ${PCL_OPTIMIZATION_FLAGS})
