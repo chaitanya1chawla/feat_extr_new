@@ -151,6 +151,16 @@ double avg_queue(queue<double> q) {
     return sum / ctr;
 }
 
+// let the user decide give 3 points of speed and their % change and do quadratic interpolation on that
+double v1 = 0.5;
+double v2 = 1.0;
+double v3 = 2.0;
+double p1 = 0.20;
+double p2 = 0.10;
+double p3 = 0.05;
+
+
+
 void speedExtract() {
 
     vector<nlohmann::json> data = readJsonFile(
@@ -303,7 +313,7 @@ void speedExtract() {
     */
 
     int accCtr = 0;
-    // speedLinflag is +1 for linear increasing speed and -1 for linear decreasing speed
+    // speedLinflag is +1 for linear increasing speed and -1 for linear decreasing speed  --- not used anymore
     int speedLinflag = 0;
     initialTimeStamp = 0;
     finalTimeStamp = 0;
