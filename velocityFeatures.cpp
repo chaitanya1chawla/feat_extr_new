@@ -319,6 +319,9 @@ void speedExtract() {
     finalTimeStamp = 0;
     int speedLinCheck = 0;
 
+
+    //TODO -- change it to whether accelerating or decelerating (we dont need constant acc)
+
     // checking here for linearly increasing and decreasing
     // toggle here, which movingAvgAcc you want to use --
     movingAvgAcc_used = movingAvgAcc_1;
