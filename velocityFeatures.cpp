@@ -55,78 +55,95 @@ int speedLessThan(double dist, double time, int &speedLessThanCheck, int &speedC
     return speedCtr;
 }
 
-int speedConstant(double val, int &speedCtr, int &speedConstantCheck) {
 
+double speedConstParameter(double val){
+    double speedPara = 0;
+    if (val <= 0.10)
+        speedPara = 0.2;
+    else if (val > 0.10 && val <= 0.20)
+        speedPara = 0.15;
+    else if (val > 0.20 && val <= 0.40)
+        speedPara = 0.10;
+    else if (val > 0.40 && val <= 0.70)
+        speedPara = 0.8;
+    else
+        speedPara = 0.6;
+    return speedPara;
+}
+
+int speedConstant(double val, int &speedCtr, int &speedConstantCheck) {
+    double speedPara = speedConstParameter(val);
     // this "if" - is used when speedConstant returns true for the first time.
-    if ((val > -0.10 && val < 0.10) && speedConstantCheck == 0) {
+    if ((val > -speedPara && val < speedPara) && speedConstantCheck == 0) {
         speedCtr = 0;
         speedConstantCheck = 1;
     }
         // this "else if" - is used to count how many times consecutively did the speedConstant returned true.
-    else if ((val > -0.10 && val < 0.10) && speedConstantCheck == 1) {
+    else if ((val > -speedPara && val < speedPara) && speedConstantCheck == 1) {
         speedCtr++;
     }
         // this "else if" - is used when speedConstant is no more true and to see final time.
-    else if (!(val > -0.10 && val < 0.10) && speedConstantCheck == 1) {
+    else if (!(val > -speedPara && val < speedPara) && speedConstantCheck == 1) {
         speedConstantCheck = 2;
     }
 
     return speedCtr;
 }
 
-int speedLinIncDec(double val, int &accCtr, int &speedLinCheck, int &speedLinflag) {
-    cout<<"speedLinCheck = "<< speedLinCheck << endl;
+int speedLinIncDec(double val, int &accCtr, int &accCheck, int &accFlag) {
+    cout<<"accCheck = "<< accCheck << endl;
     cout<<"accCtr = " << accCtr << endl;
 
-    // TODO : check if the values for val condition are correct
-    // Speed Linear Increase --
-    // this "if" - is used when speedLinIncDec returns true for the first time.
-    if ((val > -0.1 && val < 0.1) && speedLinCheck == 0) {
+    // Speed Increase --
+    // this "if" - is used when +ve acc is true for the first time.
+    if ((val > 0) && accCheck == 0) {
         accCtr = 0;
-        speedLinCheck = 1;
+        accCheck = 1;
+        accFlag = 1;
     }
-    // this "else if" - is used to count how many times consecutively did the speedConstant returned true.
-    else if ((val > -0.1 && val < 0.1) && speedLinCheck == 1) {
+    // this "else if" - is used to count how many times consecutively did +ve acc return true.
+    else if ((val > 0) && accCheck == 1) {
         accCtr++;
     }
-    // this "else if" - is used when speedConstant is no more true and to see final time.
-    else if (!(val > -0.1 && val < 0.1) && speedLinCheck == 1) {
-        speedLinCheck = 2;
-        speedLinflag = 1;
+    // this "else if" - is used when speedLinIncDec is no more true and to see final time.
+    else if (!(val > 0) && accCheck == 1 && accFlag == 1) {
+        accCheck = 2;
     }
 
-    // Speed Linear Decrease --
-    // this "if" - is used when speedConstant returns true for the first time.
-    //if ((val > -0.1 && val < 0.01) && speedLinCheck == 0) {
-    //    accCtr = 0;
-    //    speedLinCheck = 1;
-    //}
-    //    // this "else if" - is used to count how many times consecutively did the speedConstant returned true.
-    //else if ((val > -0.1 && val < 0.01) && speedLinCheck == 1) {
-    //    accCtr++;
-    //}
-    //    // this "else if" - is used when speedConstant is no more true and to see final time.
-    //else if (!(val > -0.1 && val < 0.01) && speedLinCheck == 1) {
-    //    speedLinCheck = 2;
-    //    speedLinflag = -1;
-    //}
+    // Speed Decrease --
+    // this "if" - is used when -ve acc is true for the first time.
+    if ((val < 0) && accCheck == 0) {
+        accCtr = 0;
+        accCheck = 1;
+        accFlag = -1;
+    }
+        // this "else if" - is used to count how many times consecutively did -ve acc is return true.
+    else if ((val < 0) && accCheck == 1) {
+        cout<<"speed check"<<endl;
+        accCtr++;
+    }
+        // this "else if" - is used when speedLinIncDec is no more true and to see final time.
+    else if (!(val < 0) && accCheck == 1 && accFlag == -1) {
+        cout<<"speed check 2"<<endl;
+        accCheck = 2;
+    }
 
     return accCtr;
 }
 
 int angleConstant(double val, int &angleCtr, int &angleConstantCheck) {
 
-    // this "if" - is used when speedConstant returns true for the first time.
-    if ((val < M_PI / 10) && angleConstantCheck == 0) {
+    // this "if" - is used when angleConstant returns true for the first time.
+    if ((val < 30) && angleConstantCheck == 0) {
         angleCtr = 0;
         angleConstantCheck = 1;
     }
-        // this "else if" - is used to count how many times consecutively did the speedConstant returned true.
-    else if ((val < M_PI / 10) && angleConstantCheck == 1) {
+        // this "else if" - is used to count how many times consecutively did the angleConstant returned true.
+    else if ((val < 30) && angleConstantCheck == 1) {
         angleCtr++;
     }
-        // this "else if" - is used when speedConstant is no more true and to see final time.
-    else if (!(val < M_PI / 10) && angleConstantCheck == 1) {
+        // this "else if" - is used when angleConstant is no more true and to see final time.
+    else if (!(val < 30) && angleConstantCheck == 1) {
         angleConstantCheck = 0;
     }
 
@@ -189,9 +206,9 @@ void speedExtract() {
     int ctr = 0;
 
 
-
     // checking speedLessThan and calculating all moving averages
     // DONE
+
     for (int i = 0; i < data.size() - 2; i++) {
 
         if (!data[i].contains("objects") || !data[i + 1].contains("objects") || !data[i + 2].contains("objects")) {
@@ -228,11 +245,11 @@ void speedExtract() {
                              + pow(nextPose.z() - currentPose.z(), 2));
         double time_2 = nextTimeStamp - currentTimeStamp;
 
-        // TODO : check the following calculation of angle
         Vector3d v1 = currentPose - initialPose;
         Vector3d v2 = nextPose - currentPose;
         double r = v1.transpose() * v2;
-        double angle = acos(r / (v1.norm() * v2.norm()));
+        // angle is in degrees
+        double angle = acos(r / (v1.norm() * v2.norm()))*180/3.14159;
 
         // to count how many poses were successfully detected
         ctr++;
@@ -245,6 +262,7 @@ void speedExtract() {
                                  currentTimeStamp, initialTimeStamp, finalTimeStamp);
         // if speed was kept less than max_spd for 3-4 seconds (100 frames) -
         cout << "speed = "<<dist_1/time_1<<endl;
+
         if (speedLessThanCheck == 2 && (finalTimeStamp - initialTimeStamp) > 0.09) {
             speedLessThanCheck = 0;
             cout << "You kept the speed of the object less than " << max_spd;
@@ -254,7 +272,8 @@ void speedExtract() {
 
         distQueue.push(dist_1 / time_1);
         // avg acc = Vbc - Vab / (tc-ta)
-        spdQueue.push((dist_2 / time_2) - (dist_1 / time_1) / (time_2 + time_1));
+        // we do time_2 + time_1, because their sum gives us nextTimeStamp - lastTimeStamp
+        spdQueue.push((dist_2  - dist_1) / (time_2 + time_1));
         dirQueue.push(angle);
 
         // taking moving average of last 20 values
@@ -282,11 +301,14 @@ void speedExtract() {
 
     // comparing here the moving Averages for constant speed -
     /*
+    cout << "movingAvgSpd size = "<<movingAvgSpd.size();
     for (int i = 0; i < movingAvgSpd.size() - 1; i++) {
+        // cout << movingAvgSpd.at(i)<<endl;
         if (isnan(movingAvgSpd.at(i))) {
             cout << "WTF!!";
         }
         // Percent increase in speed would vary for smaller and bigger values of speeds
+        // can either set different values for different intervals of speeds
         cout << "moving AvgSpd = " << movingAvgSpd.at(i) << endl;
         double val = (movingAvgSpd.at(i + 1) - movingAvgSpd.at(i)) / movingAvgSpd.at(i);
         speedCtr = speedConstant(val, speedCtr, speedConstantCheck);
@@ -312,27 +334,30 @@ void speedExtract() {
     }
     */
 
+
+
     int accCtr = 0;
-    // speedLinflag is +1 for linear increasing speed and -1 for linear decreasing speed  --- not used anymore
-    int speedLinflag = 0;
+    // accFlag = 1 if positive acc, and accFlag = -1 if negative acc
+    int accFlag = 0;
     initialTimeStamp = 0;
     finalTimeStamp = 0;
-    int speedLinCheck = 0;
+    int accCheck = 0;
 
+    // checking here for increasing and decreasing speeds
 
-    //TODO -- change it to whether accelerating or decelerating (we dont need constant acc)
-
-    // checking here for linearly increasing and decreasing
-    // toggle here, which movingAvgAcc you want to use --
+    // toggle here, which movingAvgAcc you want to use (movingAvgAcc_1/movingAvgAcc_2)--
+    // Kinda DONE ... need to confirm 1 or 2
     movingAvgAcc_used = movingAvgAcc_1;
+    /*
     for (int i = 0; i < movingAvgAcc_used.size() - 1; i++) {
         cout << "Moving AvgAcc = " << movingAvgAcc_used.at(i) << endl;
 
-        double val = (movingAvgAcc_used.at(i + 1) - movingAvgAcc_used.at(i)) / movingAvgAcc_used.at(i);
-        cout << "val = " << val << endl;
-        accCtr = speedLinIncDec(val, accCtr, speedLinCheck, speedLinflag);
+        // Using the movingAvgAcc directly to see if there was acceleration or deceleration
+        double val = movingAvgAcc_used.at(i);
+        accCtr = speedLinIncDec(val, accCtr, accCheck, accFlag);
 
         if (accCtr == 1) {
+
             // the moving averages are associated with frames, s.t. we are taking
             // moving average of 10 previous values and 10 next values
             // Thus we take timestamp of the i+10th value, so that our avg is
@@ -340,23 +365,23 @@ void speedExtract() {
             initialTimeStamp = data[i + 10].at("timestamp");
         }
 
-        // if speed was kept constant for 3-4 seconds (100 frames) -
-        if (speedLinCheck == 2) {
-            speedLinCheck = 0;
+        // if speed was kept increasing/decreasing for 3-4 seconds (100 frames) -
+        if (accCheck == 2) {
+            accCheck = 0;
             finalTimeStamp = data[i + 10].at("timestamp");
             if((finalTimeStamp - initialTimeStamp) > 0.5){
-                if (movingAvgAcc_used.at(i) > 0) {
-                    cout << "You kept roughly constant +ve constant acceleration of " << movingAvgAcc_used.at(i);
-                    cout << " between time period " << initialTimeStamp << " and " << finalTimeStamp << endl;
+                if (movingAvgAcc_used.at(i-1) > 0) {
+                    cout << "You kept +ve acceleration ";
+                    cout << "between time period " << initialTimeStamp << " and " << finalTimeStamp << endl;
                 }
-                else if (movingAvgAcc_used.at(i) < 0) {
-                    cout << "You kept roughly constant -ve constant acceleration of " << movingAvgAcc_used.at(i);
-                    cout << " between time period " << initialTimeStamp << " and " << finalTimeStamp << endl;
+                else if (movingAvgAcc_used.at(i-1) < 0) {
+                    cout << "You kept -ve acceleration ";
+                    cout << "between time period " << initialTimeStamp << " and " << finalTimeStamp << endl;
                 }
             }
         }
     }
-
+    */
 
     int angleCtr = 0;
     initialTimeStamp = 0;
@@ -364,7 +389,7 @@ void speedExtract() {
     int angleConstantCheck = 0;
 
     // checking for spikes in velocity (sudden direction change)
-    /*
+
     for (int i = 0; i < movingAvgDir.size() - 1; i++) {
         if(isnan(movingAvgDir.at(i))){
             cout << "WTF!!";
@@ -387,12 +412,12 @@ void speedExtract() {
         }
 
         // TODO : check this value - 
-        if (movingAvgDir.at(i) > M_PI/10){
-            cout<<"There was a sudden change in direction!";
+        if (movingAvgDir.at(i) > 50){
+            cout<<"There was a sudden change in direction!"<<endl;
         }
 
     }
-    */
+
 }
 
 int main() {
