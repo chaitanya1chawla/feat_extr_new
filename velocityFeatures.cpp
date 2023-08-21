@@ -90,42 +90,70 @@ int speedConstant(double val, int &speedCtr, int &speedConstantCheck) {
     return speedCtr;
 }
 
-int speedLinIncDec(double val, int &accCtr, int &accCheck, int &accFlag) {
-    cout<<"accCheck = "<< accCheck << endl;
-    cout<<"accCtr = " << accCtr << endl;
+int speedLinIncDec(double val, double val_next, int &accCtr, int &accCheck, int &accFlag) {
+
 
     // Speed Increase --
     // this "if" - is used when +ve acc is true for the first time.
-    if ((val > 0) && accCheck == 0) {
+    if ((val > 0.000000000) && accCheck == 0) {
         accCtr = 0;
         accCheck = 1;
         accFlag = 1;
+        cout<<"+VE";
+        cout<<"accCheck = "<< accCheck << endl;
+        cout<<"accCtr = " << accCtr << endl;
     }
     // this "else if" - is used to count how many times consecutively did +ve acc return true.
-    else if ((val > 0) && accCheck == 1) {
+    else if ((val > 0.000000000) && accCheck == 1 && accFlag == 1) {
+        cout<<"+VE";
         accCtr++;
+        cout<<"accCheck = "<< accCheck << endl;
+        cout<<"accCtr = " << accCtr << endl;
+    }
+    else if (!(val > 0.000000000) && accCheck == 1 && accFlag == 1 && val_next > 0.000000000) {
+        cout<<"+VE";
+        accCtr++;
+        cout<<"accCheck = "<< accCheck << endl;
+        cout<<"accCtr = " << accCtr << endl;
     }
     // this "else if" - is used when speedLinIncDec is no more true and to see final time.
-    else if (!(val > 0) && accCheck == 1 && accFlag == 1) {
+    else if (!(val > 0.000000000) && accCheck == 1 && accFlag == 1 && !(val_next > 0.000000000)) {
+        cout<<"speed check ++VE"<<endl;
         accCheck = 2;
+        cout<<"accCheck = "<< accCheck << endl;
+        cout<<"accCtr = " << accCtr << endl;
     }
 
     // Speed Decrease --
     // this "if" - is used when -ve acc is true for the first time.
-    if ((val < 0) && accCheck == 0) {
+    if ((val < 0.000000000) && accCheck == 0) {
         accCtr = 0;
         accCheck = 1;
+        cout<<"-VE";
         accFlag = -1;
+        cout<<"accCheck = "<< accCheck << endl;
+        cout<<"accCtr = " << accCtr << endl;
     }
         // this "else if" - is used to count how many times consecutively did -ve acc is return true.
-    else if ((val < 0) && accCheck == 1) {
-        cout<<"speed check"<<endl;
+    else if ((val < 0.000000000) && accCheck == 1 && accFlag == -1) {
+        // cout<<"speed check"<<endl;
         accCtr++;
+        cout<<"-VE";
+        cout<<"accCheck = "<< accCheck << endl;
+        cout<<"accCtr = " << accCtr << endl;
+    }
+    else if (!(val < 0.000000000) && accCheck == 1 && accFlag == -1 && val_next < 0.000000000) {
+        cout<<"-VE";
+        accCtr++;
+        cout<<"accCheck = "<< accCheck << endl;
+        cout<<"accCtr = " << accCtr << endl;
     }
         // this "else if" - is used when speedLinIncDec is no more true and to see final time.
-    else if (!(val < 0) && accCheck == 1 && accFlag == -1) {
-        cout<<"speed check 2"<<endl;
+    else if (!(val < 0.000000000) && accCheck == 1 && accFlag == -1 && !(val_next < 0.000000000)) {
+        cout<<"speed check --VE"<<endl;
         accCheck = 2;
+        cout<<"accCheck = "<< accCheck << endl;
+        cout<<"accCtr = " << accCtr << endl;
     }
 
     return accCtr;
@@ -168,6 +196,16 @@ double avg_queue(queue<double> q) {
     return sum / ctr;
 }
 
+Quaternion<double> avg_quaternion(list<Quaternion<double>> q_list){
+    list<Quaternion<double>>::iterator it;
+    Matrix<double, 20, 4> m;
+    int i =0;
+    for (it = q_list.begin(); it != q_list.end(); ++it)
+        cout << "ITERATOR = " << it->w() << endl;
+        m.col(i) = vector<double>{it->w(), it->x(), it->y(), it->z()};
+        i++;
+}
+
 // let the user decide give 3 points of speed and their % change and do quadratic interpolation on that
 double v1 = 0.5;
 double v2 = 1.0;
@@ -175,13 +213,14 @@ double v3 = 2.0;
 double p1 = 0.20;
 double p2 = 0.10;
 double p3 = 0.05;
+char obj[] = "DrinkingMugTUM-MPIInstance";
 
 
 
 void speedExtract() {
 
     vector<nlohmann::json> data = readJsonFile(
-            "../data/demonstration_2023-06-21-18-53-52_129873292.json").get<vector<json>>();
+            "../data/demonstration_vid_2.json").get<vector<json>>();
 
     cout << "Json data size = " << data.size() << endl;
     int speedLessThanCheck = 0;
@@ -192,14 +231,17 @@ void speedExtract() {
     queue<double> distQueue;
     queue<double> spdQueue;
     queue<double> dirQueue;
-    vector<double> movingAvgSpd;
+    // for averaging quaternion rotation --
+    list<Quaternion<double>> q_list;
 
+    vector<double> movingAvgSpd;
+    // for averaging quaternion rotation --
+    vector<Quaternion<double>> movingAvgRotation;
     // TODO : check which of these moving average accelerations work better?
     // first one calculates the direct velocity, get the acc, and then takes moving average of acceleration.
     // second one takes the moving average velocities to calculate acc.
     vector<double> movingAvgAcc_1;
     vector<double> movingAvgAcc_2;
-
     vector<double> movingAvgAcc_used;
     // moving average for the direction of velocity - 
     vector<double> movingAvgDir;
@@ -215,35 +257,43 @@ void speedExtract() {
             continue;
         }
         auto &objects = data[i].at("objects");
-        if (!objects.contains("MilkCartonLidlInstance1") ||
-            !data[i + 1].at("objects").contains("MilkCartonLidlInstance1") ||
-            !data[i + 2].at("objects").contains("MilkCartonLidlInstance1")) {
+        if (!objects.contains(obj) ||
+            !data[i + 1].at("objects").contains(obj) ||
+            !data[i + 2].at("objects").contains(obj)) {
             continue;
         }
-        auto &milkCarton = objects.at("MilkCartonLidlInstance1");
-        q = milkCarton.at("geometryPose").get<Posed>();
+        auto &manipulated_obj = objects.at(obj);
+        q = manipulated_obj.at("geometryPose").get<Posed>();
+
         auto initialPose = q.getTranslation();
+        auto initialRot = q.getRotation();
         // initial timeframe
-        double lastTimeStamp = data[i].at("timestamp");
+        double lastTimeStamp = data[i].at("time");
 
 
-        auto currentPose = data[i + 1].at("objects").at("MilkCartonLidlInstance1").at(
+
+        auto currentPose = data[i + 1].at("objects").at(obj).at(
                 "geometryPose").get<Posed>().getTranslation();
-        double currentTimeStamp = data[i + 1].at("timestamp");
+        auto currentRot = data[i + 1].at("objects").at(obj).at(
+                "geometryPose").get<Posed>().getRotation();
+        double currentTimeStamp = data[i + 1].at("time");
 
-        auto nextPose = data[i + 2].at("objects").at("MilkCartonLidlInstance1").at(
+        auto nextPose = data[i + 2].at("objects").at(obj).at(
                 "geometryPose").get<Posed>().getTranslation();
-        double nextTimeStamp = data[i + 2].at("timestamp");
+        double nextTimeStamp = data[i + 2].at("time");
 
         double dist_1 = sqrt(pow(currentPose.x() - initialPose.x(), 2)
                              + pow(currentPose.y() - initialPose.y(), 2)
                              + pow(currentPose.z() - initialPose.z(), 2));
         double time_1 = currentTimeStamp - lastTimeStamp;
+        // for averaging quaternion rotation --
+        auto rot_1 = currentRot * initialRot.inverse();
 
         double dist_2 = sqrt(pow(nextPose.x() - currentPose.x(), 2)
                              + pow(nextPose.y() - currentPose.y(), 2)
                              + pow(nextPose.z() - currentPose.z(), 2));
         double time_2 = nextTimeStamp - currentTimeStamp;
+
 
         Vector3d v1 = currentPose - initialPose;
         Vector3d v2 = nextPose - currentPose;
@@ -275,19 +325,30 @@ void speedExtract() {
         // we do time_2 + time_1, because their sum gives us nextTimeStamp - lastTimeStamp
         spdQueue.push((dist_2  - dist_1) / (time_2 + time_1));
         dirQueue.push(angle);
+        //rotationQueue.push(rot_1.w());
+        //rotationQueue.push(rot_1.x());
+        //rotationQueue.push(rot_1.y());
+        //rotationQueue.push(rot_1.z());
+        q_list.push_back(rot_1);
+
 
         // taking moving average of last 20 values
         if (ctr >= 20) {
             movingAvgSpd.push_back(avg_queue(distQueue));
             movingAvgAcc_1.push_back(avg_queue(spdQueue));
             movingAvgDir.push_back(avg_queue(dirQueue));
+            // for averaging quaternion rotation --
+            movingAvgRotation.push_back(avg_quaternion(q_list));
+
             distQueue.pop();
             spdQueue.pop();
             dirQueue.pop();
+            // for averaging quaternion rotation --
+            q_list.pop_front();
         }
         if (movingAvgSpd.size() > 1) {
             // finds moving average acc with prev 10 values and next 10 values
-            double time_diff = (double) data[i - 9].at("timestamp") - (double) data[i - 10].at("timestamp");
+            double time_diff = (double) data[i - 9].at("time") - (double) data[i - 10].at("time");
             movingAvgAcc_2.push_back((movingAvgSpd.at(ctr - 20) - movingAvgSpd.at(ctr - 21)) / time_diff);
         }
 
@@ -300,13 +361,13 @@ void speedExtract() {
     int speedConstantCheck = 0;
 
     // comparing here the moving Averages for constant speed -
+    // DONE
     /*
-    cout << "movingAvgSpd size = "<<movingAvgSpd.size();
     for (int i = 0; i < movingAvgSpd.size() - 1; i++) {
         // cout << movingAvgSpd.at(i)<<endl;
-        if (isnan(movingAvgSpd.at(i))) {
-            cout << "WTF!!";
-        }
+        //if (isnan(movingAvgSpd.at(i))) {
+        //    cout << "WTF!!";
+        //}
         // Percent increase in speed would vary for smaller and bigger values of speeds
         // can either set different values for different intervals of speeds
         cout << "moving AvgSpd = " << movingAvgSpd.at(i) << endl;
@@ -317,17 +378,53 @@ void speedExtract() {
             // moving average of 10 previous values and 10 next values
             // Thus we take timestamp of the i+10th value, so that our avg is
             // calculated as described
-            initialTimeStamp = data[i + 10].at("timestamp");
+            initialTimeStamp = data[i + 10].at("time");
         }
 
         // if speed was kept constant for 3-4 seconds (100 frames) -
         if (speedConstantCheck == 2) {
             speedConstantCheck = 0;
-            finalTimeStamp = data[i + 10].at("timestamp");
+            finalTimeStamp = data[i + 10].at("time");
             // for a long enough time period, we tell the user that the speed was held constant.
-            if ((finalTimeStamp - initialTimeStamp) > 0.50) {
+            if ((finalTimeStamp - initialTimeStamp) > 4.00) {
                 cout << "You kept constant speed of  " << movingAvgSpd.at(i);
-                cout << " between time period " << initialTimeStamp << " and " << finalTimeStamp << endl;
+                cout << " between time period " << setprecision(12) << initialTimeStamp << " and " << setprecision(12) << finalTimeStamp << endl;
+            }
+        }
+
+    }
+    */
+
+
+    speedCtr = 0;
+    initialTimeStamp = 0;
+    finalTimeStamp = 0;
+    //int speedConstantCheck = 0;
+
+    // comparing here the moving Averages for constant ANGULAR speed -
+    /*
+    for (int i = 0; i < movingAvgSpd.size() - 1; i++) {
+        // Percent increase in speed would vary for smaller and bigger values of speeds
+        // can either set different values for different intervals of speeds
+        cout << "moving AvgSpd = " << movingAvgSpd.at(i) << endl;
+        double val = (movingAvgSpd.at(i + 1) - movingAvgSpd.at(i)) / movingAvgSpd.at(i);
+        speedCtr = speedConstant(val, speedCtr, speedConstantCheck);
+        if (speedCtr == 1) {
+            // the moving averages are associated with frames, s.t. we are taking
+            // moving average of 10 previous values and 10 next values
+            // Thus we take timestamp of the i+10th value, so that our avg is
+            // calculated as described
+            initialTimeStamp = data[i + 10].at("time");
+        }
+
+        // if speed was kept constant for 3-4 seconds (100 frames) -
+        if (speedConstantCheck == 2) {
+            speedConstantCheck = 0;
+            finalTimeStamp = data[i + 10].at("time");
+            // for a long enough time period, we tell the user that the speed was held constant.
+            if ((finalTimeStamp - initialTimeStamp) > 4.00) {
+                cout << "You kept constant speed of  " << movingAvgSpd.at(i);
+                cout << " between time period " << setprecision(12) << initialTimeStamp << " and " << setprecision(12) << finalTimeStamp << endl;
             }
         }
 
@@ -347,14 +444,15 @@ void speedExtract() {
 
     // toggle here, which movingAvgAcc you want to use (movingAvgAcc_1/movingAvgAcc_2)--
     // Kinda DONE ... need to confirm 1 or 2
-    movingAvgAcc_used = movingAvgAcc_1;
+    movingAvgAcc_used = movingAvgAcc_2;
     /*
-    for (int i = 0; i < movingAvgAcc_used.size() - 1; i++) {
-        cout << "Moving AvgAcc = " << movingAvgAcc_used.at(i) << endl;
+    for (int i = 0; i < movingAvgAcc_used.size() - 2; i++) {
+        cout << "Moving AvgAcc = " << std::fixed << movingAvgAcc_used.at(i) << endl;
 
         // Using the movingAvgAcc directly to see if there was acceleration or deceleration
         double val = movingAvgAcc_used.at(i);
-        accCtr = speedLinIncDec(val, accCtr, accCheck, accFlag);
+        double val_next = movingAvgAcc_used.at(i+1);
+        accCtr = speedLinIncDec(val, val_next, accCtr, accCheck, accFlag);
 
         if (accCtr == 1) {
 
@@ -362,21 +460,21 @@ void speedExtract() {
             // moving average of 10 previous values and 10 next values
             // Thus we take timestamp of the i+10th value, so that our avg is
             // calculated as described above.
-            initialTimeStamp = data[i + 10].at("timestamp");
+            initialTimeStamp = data[i + 10].at("time");
         }
 
         // if speed was kept increasing/decreasing for 3-4 seconds (100 frames) -
         if (accCheck == 2) {
             accCheck = 0;
-            finalTimeStamp = data[i + 10].at("timestamp");
-            if((finalTimeStamp - initialTimeStamp) > 0.5){
+            finalTimeStamp = data[i + 10].at("time");
+            if((finalTimeStamp - initialTimeStamp) > 0.50){
                 if (movingAvgAcc_used.at(i-1) > 0) {
                     cout << "You kept +ve acceleration ";
-                    cout << "between time period " << initialTimeStamp << " and " << finalTimeStamp << endl;
+                    cout << "between time period " << setprecision(12) << initialTimeStamp << " and " << setprecision(12) << finalTimeStamp << endl;
                 }
                 else if (movingAvgAcc_used.at(i-1) < 0) {
                     cout << "You kept -ve acceleration ";
-                    cout << "between time period " << initialTimeStamp << " and " << finalTimeStamp << endl;
+                    cout << "between time period " << setprecision(12) << initialTimeStamp << " and " << setprecision(12) << finalTimeStamp << endl;
                 }
             }
         }
@@ -389,7 +487,7 @@ void speedExtract() {
     int angleConstantCheck = 0;
 
     // checking for spikes in velocity (sudden direction change)
-
+    /*
     for (int i = 0; i < movingAvgDir.size() - 1; i++) {
         if(isnan(movingAvgDir.at(i))){
             cout << "WTF!!";
@@ -417,6 +515,7 @@ void speedExtract() {
         }
 
     }
+    */
 
 }
 
