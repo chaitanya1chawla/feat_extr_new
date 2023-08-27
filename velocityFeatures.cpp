@@ -71,6 +71,24 @@ double speedConstParameter(double val){
     return speedPara;
 }
 
+Vector3d angularConstParameter(Vector3d val){
+    Vector3d angularPara;
+
+    for (int i=0;i<3; i++){
+        if (val(i) <= 0.10)
+            angularPara(i) = 0.2;
+        else if (val(i) > 0.10 && val(i) <= 0.20)
+            angularPara(i) = 0.15;
+        else if (val(i) > 0.20 && val(i) <= 0.40)
+            angularPara(i) = 0.10;
+        else if (val(i) > 0.40 && val(i) <= 0.70)
+            angularPara(i) = 0.8;
+        else
+            angularPara(i) = 0.6;
+    }
+    return angularPara;
+}
+
 int speedConstant(double val, int &speedCtr, int &speedConstantCheck) {
     double speedPara = speedConstParameter(val);
     // this "if" - is used when speedConstant returns true for the first time.
@@ -88,6 +106,26 @@ int speedConstant(double val, int &speedCtr, int &speedConstantCheck) {
     }
 
     return speedCtr;
+}
+
+Vector3d angularConstant(Vector3d val, Vector3d &angCtr, Vector3d &angularConstantCheck) {
+    Vector3d angularPara = angularConstParameter(val);
+    for(int i = 0; i < 3; i++) {
+        // this "if" - is used when speedConstant returns true for the first time.
+        if ((val(i) > -angularPara(i) && val(i) < angularPara(i)) && angularConstantCheck(i) == 0) {
+            angCtr(i) = 0;
+            angularConstantCheck(i) = 1;
+        }
+            // this "else if" - is used to count how many times consecutively did the speedConstant returned true.
+        else if ((val(i) > -angularPara(i) && val(i) < angularPara(i)) && angularConstantCheck(i) == 1) {
+            angCtr(i)++;
+        }
+            // this "else if" - is used when speedConstant is no more true and to see final time.
+        else if (!(val(i) > -angularPara(i) && val(i) < angularPara(i)) && angularConstantCheck(i) == 1) {
+            angularConstantCheck(i) = 2;
+        }
+    }
+    return angCtr;
 }
 
 int speedLinIncDec(double val, double val_next, int &accCtr, int &accCheck, int &accFlag) {
@@ -214,20 +252,8 @@ Vector3d avg_queue_vec(queue<Vector3d> q) {
     // cout<<"ctr = "<<ctr<<endl;
 
     sum /= ctr;
-    return sum;
+    return sum.normalized();
 }
-
-/*
-Quaternion<double> avg_quaternion(list<Quaternion<double>> q_list){
-    list<Quaternion<double>>::iterator it;
-    Matrix<double, 20, 4> m;
-    int i =0;
-    for (it = q_list.begin(); it != q_list.end(); ++it)
-        cout << "ITERATOR = " << it->w() << endl;
-        m.col(i) = vector<double>{it->w(), it->x(), it->y(), it->z()};
-        i++;
-}
- */
 
 // converts quaternion to axis angle representation and gives the angle
 double quat2ang(Quaternion<double> q){
@@ -369,11 +395,6 @@ void speedExtract() {
         // we do time_2 + time_1, because their sum gives us nextTimeStamp - lastTimeStamp
         spdQueue.push((dist_2  - dist_1) / (time_2 + time_1));
         dirQueue.push(angle);
-        //rotationQueue.push(rot_1.w());
-        //rotationQueue.push(rot_1.x());
-        //rotationQueue.push(rot_1.y());
-        //rotationQueue.push(rot_1.z());
-        // q_list.push_back(rot_
         rotQueue.push(quat2ang(rot_1) * quat2ax(currentRot) / time_1 );
 
 
@@ -384,14 +405,10 @@ void speedExtract() {
             movingAvgDir.push_back(avg_queue(dirQueue));
             movingAvgRotation.push_back(avg_queue_vec(rotQueue));
 
-            // for averaging quaternion rotation --
-             //movingAvgRotation.push_back(avg_quaternion(q_list));
-
             distQueue.pop();
             spdQueue.pop();
             dirQueue.pop();
-            // for averaging quaternion rotation --
-            // q_list.pop_front();
+            rotQueue.pop();
         }
         if (movingAvgSpd.size() > 1) {
             // finds moving average acc with prev 10 values and next 10 values
@@ -443,20 +460,22 @@ void speedExtract() {
     */
 
 
-    speedCtr = 0;
+    Vector3d angCtr;
     initialTimeStamp = 0;
     finalTimeStamp = 0;
-    //int speedConstantCheck = 0;
+    Vector3d angularConstantCheck;
+    angularConstantCheck = {0,0,0};
 
     // comparing here the moving Averages for constant ANGULAR speed -
-    /*
-    for (int i = 0; i < movingAvgSpd.size() - 1; i++) {
-        // Percent increase in speed would vary for smaller and bigger values of speeds
+    // DONE -- check with example and set parameters
+    for (int i = 0; i < movingAvgRotation.size() - 1; i++) {
+        // Percent increase in angular speed would vary for smaller and bigger values of speeds
         // can either set different values for different intervals of speeds
-        cout << "moving AvgSpd = " << movingAvgSpd.at(i) << endl;
-        double val = (movingAvgSpd.at(i + 1) - movingAvgSpd.at(i)) / movingAvgSpd.at(i);
-        speedCtr = speedConstant(val, speedCtr, speedConstantCheck);
-        if (speedCtr == 1) {
+        cout << "moving AvgRotation = " << movingAvgRotation.at(i) << endl;
+        Vector3d val = movingAvgRotation.at(i + 1) - movingAvgRotation.at(i);
+        angCtr = angularConstant(val, angCtr, angularConstantCheck);
+
+        if (angCtr(0) == 1 && angCtr(1) == 1 && angCtr(2) == 1) {
             // the moving averages are associated with frames, s.t. we are taking
             // moving average of 10 previous values and 10 next values
             // Thus we take timestamp of the i+10th value, so that our avg is
@@ -464,20 +483,17 @@ void speedExtract() {
             initialTimeStamp = data[i + 10].at("time");
         }
 
-        // if speed was kept constant for 3-4 seconds (100 frames) -
-        if (speedConstantCheck == 2) {
-            speedConstantCheck = 0;
+        if (angularConstantCheck(0) == 2 || angularConstantCheck(1) == 2 || angularConstantCheck(2) == 2) {
+            angularConstantCheck = {0,0,0};
             finalTimeStamp = data[i + 10].at("time");
-            // for a long enough time period, we tell the user that the speed was held constant.
             if ((finalTimeStamp - initialTimeStamp) > 4.00) {
-                cout << "You kept constant speed of  " << movingAvgSpd.at(i);
+                cout << "You kept constant ANGULAR speed of  " << movingAvgRotation.at(i);
                 cout << " between time period " << setprecision(12) << initialTimeStamp << " and " << setprecision(12) << finalTimeStamp << endl;
             }
         }
 
     }
-    */
-
+    
 
 
     int accCtr = 0;
