@@ -493,9 +493,8 @@ void speedExtract() {
         }
 
     }
+
     
-
-
     int accCtr = 0;
     // accFlag = 1 if positive acc, and accFlag = -1 if negative acc
     int accFlag = 0;
@@ -549,6 +548,7 @@ void speedExtract() {
     int angleConstantCheck = 0;
 
     // checking for spikes in velocity (sudden direction change)
+    // NEEDS TO BE TESTED
     /*
     for (int i = 0; i < movingAvgDir.size() - 1; i++) {
         if(isnan(movingAvgDir.at(i))){
