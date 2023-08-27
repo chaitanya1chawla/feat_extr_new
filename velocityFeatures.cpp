@@ -196,6 +196,28 @@ double avg_queue(queue<double> q) {
     return sum / ctr;
 }
 
+Vector3d avg_queue_vec(queue<Vector3d> q) {
+
+    Vector3d sum;
+    sum << 0,0,0;
+    double ctr = 0;
+    if (q.empty()) {
+        cout << "Error: Queue is empty" << endl;
+        return sum;
+    }
+    while (q.size() != 0) {
+        sum += q.front();
+        q.pop();
+        ctr++;
+    }
+    // cout<<"SUM = "<<sum<<endl;
+    // cout<<"ctr = "<<ctr<<endl;
+
+    sum /= ctr;
+    return sum;
+}
+
+/*
 Quaternion<double> avg_quaternion(list<Quaternion<double>> q_list){
     list<Quaternion<double>>::iterator it;
     Matrix<double, 20, 4> m;
@@ -205,6 +227,22 @@ Quaternion<double> avg_quaternion(list<Quaternion<double>> q_list){
         m.col(i) = vector<double>{it->w(), it->x(), it->y(), it->z()};
         i++;
 }
+ */
+
+// converts quaternion to axis angle representation and gives the angle
+double quat2ang(Quaternion<double> q){
+    float angle_rad = acos(q.x()) * 2;
+    return angle_rad;
+}
+
+// converts quaternion to axis angle representation and gives the axis
+Vector3d quat2ax(Quaternion<double> q){
+    float angle = quat2ang(q);
+    Vector3d v;
+    v << q.y() / sin(angle/2), q.z() / sin(angle/2), q.w() / sin(angle/2);
+    return v;
+}
+
 
 // let the user decide give 3 points of speed and their % change and do quadratic interpolation on that
 double v1 = 0.5;
@@ -231,19 +269,24 @@ void speedExtract() {
     queue<double> distQueue;
     queue<double> spdQueue;
     queue<double> dirQueue;
+    queue<Vector3d> rotQueue;
+
     // for averaging quaternion rotation --
-    list<Quaternion<double>> q_list;
+    // list<Quaternion<double>> q_list;
 
     vector<double> movingAvgSpd;
-    // for averaging quaternion rotation --
-    vector<Quaternion<double>> movingAvgRotation;
+
+    // for averaging quaternion rotation (for const direction) --
+    vector<Vector3d> movingAvgRotation;
+
     // TODO : check which of these moving average accelerations work better?
     // first one calculates the direct velocity, get the acc, and then takes moving average of acceleration.
     // second one takes the moving average velocities to calculate acc.
     vector<double> movingAvgAcc_1;
     vector<double> movingAvgAcc_2;
     vector<double> movingAvgAcc_used;
-    // moving average for the direction of velocity - 
+
+    // moving average for the direction of velocity (spiking in direction) -
     vector<double> movingAvgDir;
     int ctr = 0;
 
@@ -286,8 +329,9 @@ void speedExtract() {
                              + pow(currentPose.y() - initialPose.y(), 2)
                              + pow(currentPose.z() - initialPose.z(), 2));
         double time_1 = currentTimeStamp - lastTimeStamp;
+
         // for averaging quaternion rotation --
-        auto rot_1 = currentRot * initialRot.inverse();
+        auto rot_1 = initialRot.inverse() * currentRot;
 
         double dist_2 = sqrt(pow(nextPose.x() - currentPose.x(), 2)
                              + pow(nextPose.y() - currentPose.y(), 2)
@@ -329,7 +373,8 @@ void speedExtract() {
         //rotationQueue.push(rot_1.x());
         //rotationQueue.push(rot_1.y());
         //rotationQueue.push(rot_1.z());
-        q_list.push_back(rot_1);
+        // q_list.push_back(rot_
+        rotQueue.push(quat2ang(rot_1) * quat2ax(currentRot) / time_1 );
 
 
         // taking moving average of last 20 values
@@ -337,14 +382,16 @@ void speedExtract() {
             movingAvgSpd.push_back(avg_queue(distQueue));
             movingAvgAcc_1.push_back(avg_queue(spdQueue));
             movingAvgDir.push_back(avg_queue(dirQueue));
+            movingAvgRotation.push_back(avg_queue_vec(rotQueue));
+
             // for averaging quaternion rotation --
-            movingAvgRotation.push_back(avg_quaternion(q_list));
+             //movingAvgRotation.push_back(avg_quaternion(q_list));
 
             distQueue.pop();
             spdQueue.pop();
             dirQueue.pop();
             // for averaging quaternion rotation --
-            q_list.pop_front();
+            // q_list.pop_front();
         }
         if (movingAvgSpd.size() > 1) {
             // finds moving average acc with prev 10 values and next 10 values
@@ -440,8 +487,7 @@ void speedExtract() {
     finalTimeStamp = 0;
     int accCheck = 0;
 
-    // checking here for increasing and decreasing speeds
-
+    // checking here for increasing and decreasing speeds (ACCELERATION)
     // toggle here, which movingAvgAcc you want to use (movingAvgAcc_1/movingAvgAcc_2)--
     // Kinda DONE ... need to confirm 1 or 2
     movingAvgAcc_used = movingAvgAcc_2;
