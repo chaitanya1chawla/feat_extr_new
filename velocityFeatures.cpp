@@ -56,7 +56,7 @@ int speedLessThan(double dist, double time, int &speedLessThanCheck, int &speedC
 }
 
 
-double speedConstParameter(double val){
+double speedConstParams(double val){
     double speedPara = 0;
     if (val <= 0.10)
         speedPara = 0.2;
@@ -71,26 +71,25 @@ double speedConstParameter(double val){
     return speedPara;
 }
 
-Vector3d angularConstParameter(Vector3d val){
-    Vector3d angularPara;
+double angularConstParams(double val){
 
-    for (int i=0;i<3; i++){
-        if (val(i) <= 0.10)
-            angularPara(i) = 0.2;
-        else if (val(i) > 0.10 && val(i) <= 0.20)
-            angularPara(i) = 0.15;
-        else if (val(i) > 0.20 && val(i) <= 0.40)
-            angularPara(i) = 0.10;
-        else if (val(i) > 0.40 && val(i) <= 0.70)
-            angularPara(i) = 0.8;
-        else
-            angularPara(i) = 0.6;
-    }
-    return angularPara;
+    double angularParam;
+    if (val <= 0.10)
+        angularParam = 0.2;
+    else if (val > 0.10 && val <= 0.20)
+        angularParam = 0.15;
+    else if (val > 0.20 && val <= 0.40)
+        angularParam = 0.10;
+    else if (val > 0.40 && val <= 0.70)
+        angularParam = 0.8;
+    else
+        angularParam = 0.6;
+
+    return angularParam;
 }
 
 int speedConstant(double val, int &speedCtr, int &speedConstantCheck) {
-    double speedPara = speedConstParameter(val);
+    double speedPara = speedConstParams(val);
     // this "if" - is used when speedConstant returns true for the first time.
     if ((val > -speedPara && val < speedPara) && speedConstantCheck == 0) {
         speedCtr = 0;
@@ -108,22 +107,21 @@ int speedConstant(double val, int &speedCtr, int &speedConstantCheck) {
     return speedCtr;
 }
 
-Vector3d angularConstant(Vector3d val, Vector3d &angCtr, Vector3d &angularConstantCheck) {
-    Vector3d angularPara = angularConstParameter(val);
-    for(int i = 0; i < 3; i++) {
-        // this "if" - is used when speedConstant returns true for the first time.
-        if ((val(i) > -angularPara(i) && val(i) < angularPara(i)) && angularConstantCheck(i) == 0) {
-            angCtr(i) = 0;
-            angularConstantCheck(i) = 1;
-        }
-            // this "else if" - is used to count how many times consecutively did the speedConstant returned true.
-        else if ((val(i) > -angularPara(i) && val(i) < angularPara(i)) && angularConstantCheck(i) == 1) {
-            angCtr(i)++;
-        }
-            // this "else if" - is used when speedConstant is no more true and to see final time.
-        else if (!(val(i) > -angularPara(i) && val(i) < angularPara(i)) && angularConstantCheck(i) == 1) {
-            angularConstantCheck(i) = 2;
-        }
+double angularConstant(double val, double &angCtr, double &angularConstantCheck) {
+    double angularParam = angularConstParams(val);
+    // this "if" - is used when speedConstant returns true for the first time.
+    if ((val > -angularParam && val < angularParam) && angularConstantCheck == 0) {
+        angCtr = 0;
+        angularConstantCheck = 1;
+    }
+    // this "else if" - is used to count how many times consecutively did the angularConstant returned true.
+    else if ((val > -angularParam && val < angularParam) && angularConstantCheck == 1) {
+        angCtr++;
+    }
+    // this "else if" - is used when angular speed is no more constant and to see final time.
+    else if (!(val > -angularParam && val < angularParam) && angularConstantCheck == 1) {
+        angularConstantCheck = 2;
+
     }
     return angCtr;
 }
@@ -197,7 +195,7 @@ int speedLinIncDec(double val, double val_next, int &accCtr, int &accCheck, int 
     return accCtr;
 }
 
-int angleConstant(double val, int &angleCtr, int &angleConstantCheck) {
+int directionConstant(double val, int &angleCtr, int &angleConstantCheck) {
 
     // this "if" - is used when angleConstant returns true for the first time.
     if ((val < 30) && angleConstantCheck == 0) {
@@ -270,7 +268,7 @@ Vector3d quat2ax(Quaternion<double> q){
 }
 
 
-// let the user decide give 3 points of speed and their % change and do quadratic interpolation on that
+// let the user decide and give 3 points of speed and their % change and do quadratic interpolation on that
 double v1 = 0.5;
 double v2 = 1.0;
 double v3 = 2.0;
@@ -460,22 +458,22 @@ void speedExtract() {
     */
 
 
-    Vector3d angCtr;
+    double angCtr;
     initialTimeStamp = 0;
     finalTimeStamp = 0;
-    Vector3d angularConstantCheck;
-    angularConstantCheck = {0,0,0};
+    double angularConstantCheck = 0;
 
     // comparing here the moving Averages for constant ANGULAR speed -
     // DONE -- check with example and set parameters
+    /*
     for (int i = 0; i < movingAvgRotation.size() - 1; i++) {
         // Percent increase in angular speed would vary for smaller and bigger values of speeds
         // can either set different values for different intervals of speeds
         cout << "moving AvgRotation = " << movingAvgRotation.at(i) << endl;
         Vector3d val = movingAvgRotation.at(i + 1) - movingAvgRotation.at(i);
-        angCtr = angularConstant(val, angCtr, angularConstantCheck);
+        angCtr = angularConstant(val.norm(), angCtr, angularConstantCheck);
 
-        if (angCtr(0) == 1 && angCtr(1) == 1 && angCtr(2) == 1) {
+        if (angCtr == 1) {
             // the moving averages are associated with frames, s.t. we are taking
             // moving average of 10 previous values and 10 next values
             // Thus we take timestamp of the i+10th value, so that our avg is
@@ -483,8 +481,8 @@ void speedExtract() {
             initialTimeStamp = data[i + 10].at("time");
         }
 
-        if (angularConstantCheck(0) == 2 || angularConstantCheck(1) == 2 || angularConstantCheck(2) == 2) {
-            angularConstantCheck = {0,0,0};
+        if (angularConstantCheck == 2 ) {
+            angularConstantCheck = 0;
             finalTimeStamp = data[i + 10].at("time");
             if ((finalTimeStamp - initialTimeStamp) > 4.00) {
                 cout << "You kept constant ANGULAR speed of  " << movingAvgRotation.at(i);
@@ -493,8 +491,8 @@ void speedExtract() {
         }
 
     }
+    */
 
-    
     int accCtr = 0;
     // accFlag = 1 if positive acc, and accFlag = -1 if negative acc
     int accFlag = 0;
@@ -549,13 +547,11 @@ void speedExtract() {
 
     // checking for spikes in velocity (sudden direction change)
     // NEEDS TO BE TESTED
-    /*
+
     for (int i = 0; i < movingAvgDir.size() - 1; i++) {
-        if(isnan(movingAvgDir.at(i))){
-            cout << "WTF!!";
-        }
+
         cout << "moving AvgDir = " << movingAvgDir.at(i)<<endl;
-        angleCtr = angleConstant(movingAvgDir.at(i), angleCtr, angleConstantCheck);
+        angleCtr = directionConstant(movingAvgDir.at(i), angleCtr, angleConstantCheck);
         if (angleCtr == 1) {
             // the moving averages are associated with frames, s.t. we are taking
             // moving average of 10 previous values and 10 next values
@@ -577,7 +573,7 @@ void speedExtract() {
         }
 
     }
-    */
+
 
 }
 

@@ -5,15 +5,15 @@
 
     "initialPoint": {
       "translation": {
-        "x" : 0.0,
+        "x" : 1.0,
         "y" : 0.0,
         "z" : 0.0
       },
       "rotation": {
-        "x" : 1.0,
+        "w" : 1.0,
+        "x" : 0.0,
         "y" : 0.0,
-        "z" : 0.0,
-        "w" : 0.0
+        "z" : 0.0
       }
     },
 
@@ -22,11 +22,11 @@
     "constantVelocity": {
       "value": {
         "x": 1,
-        "y": 1,
-        "z": 1
+        "y": 0,
+        "z": 0
       },
       "startTime": 0.0,
-      "endTime": 10.0
+      "endTime": 0.0
     },
 
     "constantAcceleration": {
@@ -35,8 +35,8 @@
         "y": 0,
         "z": 0
       },
-      "startTime": 10.0,
-      "endTime": 15.0
+      "startTime": 0.0,
+      "endTime": 1.0
     },
 
     "constantAngularVelocity":{
@@ -45,8 +45,8 @@
         "y": 0,
         "z": 0
       },
-      "startTime": 15.0,
-      "endTime": 20.0
+      "startTime": 2.0,
+      "endTime": 2.0
     }
   }
 }

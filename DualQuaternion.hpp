@@ -11,7 +11,7 @@
 
 namespace AndreiUtils {
     template<class T>
-    class DualQuaternion {
+    class DualQuaternion {s
     public:
         static DualQuaternion identity() {
             return DualQuaternion::one;
